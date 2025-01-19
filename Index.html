@@ -1,9 +1,18 @@
-
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
-  
+    <title>Flap Away!</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            background: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
     <script type="text/javascript" src="./Assetmanager.js"></script>
     <script type="text/javascript" src="./Timer.js"></script>
     <script type="text/javascript" src="./GameEngine.js"></script>
@@ -13,5 +22,6 @@
     <script type="text/javascript" src="./main.js"></script>
 </head>
 <body>
+    <canvas id="gameWorld" width="800" height="600"></canvas>
 </body>
 </html>
