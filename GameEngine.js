@@ -19,22 +19,22 @@ class GameEngine {
         this.options = options || {
             debugging: false,
         };
-    };
+    }
 
     init(ctx) {
         this.ctx = ctx;
         this.startInput();
         this.timer = new Timer();
-    };
+    }
 
     start() {
         this.running = true;
         const gameLoop = () => {
             this.loop();
-            requestAnimFrame(gameLoop, this.ctx.canvas);
+            requestAnimationFrame(gameLoop); 
         };
         gameLoop();
-    };
+    }
 
     startInput() {
         const getXandY = e => ({
@@ -60,7 +60,7 @@ class GameEngine {
             if (this.options.debugging) {
                 console.log("WHEEL", getXandY(e), e.wheelDelta);
             }
-            e.preventDefault(); // Prevent Scrolling
+            e.preventDefault(); 
             this.wheel = e;
         });
 
@@ -68,27 +68,25 @@ class GameEngine {
             if (this.options.debugging) {
                 console.log("RIGHT_CLICK", getXandY(e));
             }
-            e.preventDefault(); // Prevent Context Menu
+            e.preventDefault(); 
             this.rightclick = getXandY(e);
         });
 
         this.ctx.canvas.addEventListener("keydown", event => this.keys[event.key] = true);
         this.ctx.canvas.addEventListener("keyup", event => this.keys[event.key] = false);
-    };
+    }
 
     addEntity(entity) {
         this.entities.push(entity);
-    };
+    }
 
     draw() {
-        // Clear the whole canvas with transparent color (rgba(0, 0, 0, 0))
         this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
 
-        // Draw latest things first
         for (let i = this.entities.length - 1; i >= 0; i--) {
             this.entities[i].draw(this.ctx, this);
         }
-    };
+    }
 
     update() {
         let entitiesCount = this.entities.length;
@@ -106,14 +104,13 @@ class GameEngine {
                 this.entities.splice(i, 1);
             }
         }
-    };
+    }
 
     loop() {
         this.clockTick = this.timer.tick();
         this.update();
         this.draw();
-    };
-
-};
+    }
+}
 
 // KV Le was here :)
