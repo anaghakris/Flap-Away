@@ -4,6 +4,8 @@ const ASSET_MANAGER = new AssetManager();
 
 ASSET_MANAGER.queueDownload("./Sprites/Background/Daytime.png");
 ASSET_MANAGER.queueDownload("./Sprites/Background/base.png");
+ASSET_MANAGER.queueDownload("./Sprites/Pipes/bottom pipe.png");
+
 
 
 
