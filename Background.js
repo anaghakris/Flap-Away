@@ -9,7 +9,7 @@ class Background {
         this.baseY = this.height - this.baseHeight;
 
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
-        this.pipeX = 200;
+        this.pipeX = 380;
         this.pipeY = this.baseY - 200;
         this.pipeWidth = 50; 
         this.pipeHeight = 200;
