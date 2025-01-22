@@ -17,15 +17,21 @@ class Background {
         this.pipeSpacing = 200;
         this.pipeInterval = 1500;
 
-        this.gameStarted = false; 
+        this.gameStarted = false;
         this.setupPipeSpawning();
     }
 
     startGame() {
-        this.gameStarted = true; 
+        this.gameStarted = true;
+        this.game.entities.forEach(entity => {
+            if (entity instanceof Bird) {
+                entity.startGame();
+            }
+        });
     }
+
     spawnPipePair() {
-        if (!this.gameStarted) return; 
+        if (!this.gameStarted) return;
 
         const opening = 120;
         const topPipeHeight = Math.random() * (this.baseY - this.pipeSpacing - opening);
@@ -56,7 +62,7 @@ class Background {
     }
 
     update() {
-        if (!this.gameStarted) return; 
+        if (!this.gameStarted) return;
 
         this.pipeArray.forEach(pipe => {
             pipe.x -= this.pipeSpeed;
@@ -67,7 +73,7 @@ class Background {
 
     draw(ctx) {
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
-        
+
         this.pipeArray.forEach(pipe => {
             if (pipe.flipped) {
                 ctx.save();
@@ -86,5 +92,10 @@ class Background {
 
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
     }
-
 }
+
+canvas.addEventListener("keydown", (e) => {
+    if (e.key === " " && !background.gameStarted) {
+        background.startGame();
+    }
+});
