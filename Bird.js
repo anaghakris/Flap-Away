@@ -28,9 +28,11 @@ class Bird {
         }
 
         if (this.y < 0) this.y = 0; 
-        if (this.y > this.game.ctx.canvas.height - 70) { 
-            this.y = this.game.ctx.canvas.height - 70;
+        if (this.y > 565 - 70) { 
+            this.y = 565 - 70;
             this.velocity = 0;
+
+            game.gameOver = true;
         }
     }
 
