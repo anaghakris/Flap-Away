@@ -29,6 +29,7 @@ class Background {
         this.snappingPlantScale = 0.2; // Scale the snapping plant to appear smaller
 
         this.gameStarted = false;
+        this.pipePairCount = 0; // Counter to track pipe pair spawning
         this.setupPipeSpawning();
     }
 
@@ -65,28 +66,34 @@ class Background {
             flipped: false
         };
         this.pipeArray.push(bottomPipe);
-    
-        // Snapping plant on top of the bottom pipe
-        const bottomPlantX = bottomPipe.x + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
-        const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
-    
-        this.snappingPlants.push({
-            x: bottomPlantX,
-            y: bottomPlantY, // Align directly on top of the bottom pipe
-            elapsedTime: 0, // Track animation time for each plant
-            type: "bottom"
-        });
-    
-        // Snapping plant below the top pipe
-        const topPlantX = this.width + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
-        const topPlantY = topPipeHeight - (this.snappingPlantTopFrameHeight * this.snappingPlantScale);
-    
-        this.snappingPlants.push({
-            x: topPlantX,
-            y: topPlantY, // Align directly below the top pipe
-            elapsedTime: 0, // Track animation time for each plant
-            type: "top"
-        });
+
+        // Only spawn snapping plant every other pipe pair
+        if (this.pipePairCount % 2 === 0) {
+            // Snapping plant on top of the bottom pipe
+            const bottomPlantX = bottomPipe.x + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
+            const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
+        
+            this.snappingPlants.push({
+                x: bottomPlantX,
+                y: bottomPlantY, // Align directly on top of the bottom pipe
+                elapsedTime: 0, // Track animation time for each plant
+                type: "bottom"
+            });
+        
+            // Snapping plant below the top pipe
+            const topPlantX = this.width + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
+            const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 10; // Adjusted for better visibility
+        
+            this.snappingPlants.push({
+                x: topPlantX,
+                y: topPlantY, // Align directly below the top pipe
+                elapsedTime: 0, // Track animation time for each plant
+                type: "top"
+            });
+        }
+
+        // Increment the pipe pair count
+        this.pipePairCount++;
     }
     
 
@@ -148,7 +155,6 @@ class Background {
     
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
     }
-    
 }
 
 canvas.addEventListener("keydown", (e) => {
