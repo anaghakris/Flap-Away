@@ -69,7 +69,7 @@ class Background {
             const bottomPlantX = bottomPipe.x + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
             const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
             
-            const bottomDelay = Math.random() * 3;
+            const bottomDelay = Math.random() * 1;
             
             this.snappingPlants.push({
                 x: bottomPlantX,
@@ -81,7 +81,7 @@ class Background {
             const topPlantX = this.width + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
             const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 10;
             
-            const topDelay = Math.random() * 4;
+            const topDelay = Math.random() * 3;
             
             this.snappingPlants.push({
                 x: topPlantX,
