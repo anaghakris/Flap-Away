@@ -12,7 +12,7 @@ class Background {
         this.baseHeight = 70;
         this.baseY = this.height - this.baseHeight;
 
-        this.pipeWidth = 50;
+        this.pipeWidth = 55;
         this.pipeHeight = 200;
         this.pipeArray = [];
         this.snappingPlants = [];
@@ -128,12 +128,12 @@ class Background {
                 ctx.scale(1, -1);
                 ctx.drawImage(
                     this.pipeSprite,
-                    0, 0, 50, 200,
+                    0, 0, 55, 200,
                     -pipe.width / 2, -pipe.height / 2, pipe.width, pipe.height
                 );
                 ctx.restore();
             } else {
-                ctx.drawImage(this.pipeSprite, 0, 0, 50, 200, pipe.x, pipe.y, pipe.width, pipe.height);
+                ctx.drawImage(this.pipeSprite, 0, 0, 55, 200, pipe.x, pipe.y, pipe.width, pipe.height);
             }
         });
     
