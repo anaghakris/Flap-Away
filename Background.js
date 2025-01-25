@@ -18,7 +18,7 @@ class Background {
         this.snappingPlants = [];
         this.pipeSpeed = 5;
         this.pipeSpacing = 200;
-        this.pipeInterval = 3000;
+        this.pipeInterval = 1500;
 
         this.snappingPlantFrameWidth = 215;
         this.snappingPlantFrameHeight = 360;
