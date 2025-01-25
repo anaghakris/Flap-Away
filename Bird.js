@@ -5,40 +5,54 @@ class Bird {
             ASSET_MANAGER.getAsset("./Sprites/Bird/yellowbird-sprite-sheet.png"),
             0, 0, 34, 70, 3, 0.2
         );
-        this.x = 200; 
-        this.y = 300; 
-        this.velocity = 0; 
+        this.x = 200;
+        this.y = 300;
+        this.velocity = 0;
         this.gravity = 0.5;
-        this.lift = -10; 
-        this.gameStarted = false; 
+        this.lift = -6;
+        this.rotation = 0; 
+        this.maxRotationDown = Math.PI / 2; 
+        this.maxRotationUp = -Math.PI / 8; 
+        this.gameStarted = false;
     }
 
     startGame() {
-        this.gameStarted = true; 
+        this.gameStarted = true;
     }
 
     update() {
-        if (!this.gameStarted) return; 
+        if (!this.gameStarted) return;
 
         this.velocity += this.gravity;
         this.y += this.velocity;
 
         if (this.game.keys[" "]) {
-            this.velocity = this.lift; 
+            this.velocity = this.lift;
         }
 
-        if (this.y < 0) this.y = 0; 
-        if (this.y > 565 - 70) { 
+        if (this.velocity > 0) {
+            this.rotation = Math.min(this.maxRotationDown, this.velocity / 10); 
+        } 
+        else {
+            this.rotation = Math.max(this.maxRotationUp, this.velocity / 10); 
+        }
+
+        if (this.y < 0) this.y = 0;
+        if (this.y > 565 - 70) {
             this.y = 565 - 70;
             this.velocity = 0;
-
+            this.rotation = this.maxRotationDown; 
             game.gameOver = true;
         }
     }
 
     draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x + 34 / 2, this.y + 70 / 2); 
+        ctx.rotate(this.rotation); 
+        ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2)); 
         const scale = 0.6; 
         this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
+        ctx.restore();
     }
-    
 }
