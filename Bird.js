@@ -37,6 +37,8 @@ class Bird {
     }
 
     draw(ctx) {
-        this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2);
+        const scale = 0.6; 
+        this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
     }
+    
 }
