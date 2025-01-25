@@ -8,12 +8,13 @@ class Bird {
         this.x = 200;
         this.y = 300;
         this.velocity = 0;
-        this.gravity = 0.5;
-        this.lift = -6;
-        this.rotation = 0; 
-        this.maxRotationDown = Math.PI / 2; 
-        this.maxRotationUp = -Math.PI / 8; 
+        this.gravity = 0.3;  
+        this.lift = -4.8;   
+        this.rotation = 0;
+        this.maxRotationDown = Math.PI / 2;
+        this.maxRotationUp = -Math.PI / 8;
         this.gameStarted = false;
+        this.smoothingFactor = 0.15;
     }
 
     startGame() {
@@ -24,34 +25,34 @@ class Bird {
         if (!this.gameStarted) return;
 
         this.velocity += this.gravity;
+        this.velocity *= 0.95;
         this.y += this.velocity;
 
         if (this.game.keys[" "]) {
             this.velocity = this.lift;
         }
 
-        if (this.velocity > 0) {
-            this.rotation = Math.min(this.maxRotationDown, this.velocity / 10); 
-        } 
-        else {
-            this.rotation = Math.max(this.maxRotationUp, this.velocity / 10); 
-        }
+        const targetRotation = this.velocity > 0 
+            ? Math.min(this.maxRotationDown, this.velocity / 8)
+            : Math.max(this.maxRotationUp, this.velocity / 8);
+            
+        this.rotation += (targetRotation - this.rotation) * this.smoothingFactor;
 
         if (this.y < 0) this.y = 0;
         if (this.y > 565 - 70) {
             this.y = 565 - 70;
             this.velocity = 0;
-            this.rotation = this.maxRotationDown; 
+            this.rotation = this.maxRotationDown;
             game.gameOver = true;
         }
     }
 
     draw(ctx) {
         ctx.save();
-        ctx.translate(this.x + 34 / 2, this.y + 70 / 2); 
-        ctx.rotate(this.rotation); 
-        ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2)); 
-        const scale = 0.6; 
+        ctx.translate(this.x + 34 / 2, this.y + 70 / 2);
+        ctx.rotate(this.rotation);
+        ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2));
+        const scale = 0.6;
         this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
         ctx.restore();
     }

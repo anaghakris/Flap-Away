@@ -16,7 +16,7 @@ class Background {
         this.pipeHeight = 200;
         this.pipeArray = [];
         this.snappingPlants = [];
-        this.pipeSpeed = 4;
+        this.pipeSpeed = 5;
         this.pipeSpacing = 200;
         this.pipeInterval = 3000; //Distances the pipe pairs
 
