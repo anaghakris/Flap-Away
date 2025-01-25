@@ -16,9 +16,9 @@ class Background {
         this.pipeHeight = 200;
         this.pipeArray = [];
         this.snappingPlants = [];
-        this.pipeSpeed = 2;
+        this.pipeSpeed = 4;
         this.pipeSpacing = 200;
-        this.pipeInterval = 3000;
+        this.pipeInterval = 3000; //Distances the pipe pairs
 
         this.snappingPlantFrameWidth = 215; // Updated for new sprite sheet width
         this.snappingPlantFrameHeight = 360; // Updated for new sprite sheet height
@@ -81,7 +81,7 @@ class Background {
             const topPlantX = this.width + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
             const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 10;
             
-            const topDelay = Math.random() * 5;
+            const topDelay = Math.random() * 4;
             
             this.snappingPlants.push({
                 x: topPlantX,
