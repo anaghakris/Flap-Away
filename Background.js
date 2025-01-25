@@ -45,10 +45,9 @@ class Background {
     spawnPipePair() {
         if (!this.gameStarted) return;
     
-        const opening = 200; // Distance between top and bottom pipes
+        const opening = 200;
         const topPipeHeight = Math.random() * (this.baseY - this.pipeSpacing - opening);
     
-        // Top pipe
         this.pipeArray.push({
             x: this.width,
             y: topPipeHeight - this.pipeHeight,
@@ -57,7 +56,6 @@ class Background {
             flipped: true
         });
     
-        // Bottom pipe
         const bottomPipe = {
             x: this.width,
             y: topPipeHeight + opening,
@@ -66,36 +64,35 @@ class Background {
             flipped: false
         };
         this.pipeArray.push(bottomPipe);
-
-        // Only spawn snapping plant every other pipe pair
+    
         if (this.pipePairCount % 2 === 0) {
-            // Snapping plant on top of the bottom pipe
             const bottomPlantX = bottomPipe.x + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
             const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
-        
+            
+            const bottomDelay = Math.random() * 3;
+            
             this.snappingPlants.push({
                 x: bottomPlantX,
-                y: bottomPlantY, // Align directly on top of the bottom pipe
-                elapsedTime: 0, // Track animation time for each plant
+                y: bottomPlantY,
+                elapsedTime: -bottomDelay,
                 type: "bottom"
             });
-        
-            // Snapping plant below the top pipe
+    
             const topPlantX = this.width + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
-            const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 10; // Adjusted for better visibility
-        
+            const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 10;
+            
+            const topDelay = Math.random() * 5;
+            
             this.snappingPlants.push({
                 x: topPlantX,
-                y: topPlantY, // Align directly below the top pipe
-                elapsedTime: 0, // Track animation time for each plant
+                y: topPlantY,
+                elapsedTime: -topDelay,  
                 type: "top"
             });
         }
-
-        // Increment the pipe pair count
+    
         this.pipePairCount++;
     }
-    
 
     setupPipeSpawning() {
         setInterval(() => {
@@ -114,7 +111,7 @@ class Background {
 
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
-            plant.elapsedTime += this.game.clockTick; // Update animation time
+            plant.elapsedTime += this.game.clockTick; 
         });
 
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
@@ -141,15 +138,18 @@ class Background {
         });
     
         this.snappingPlants.forEach(plant => {
+            if (plant.elapsedTime < 0) return; 
+            
             const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
             const sprite = plant.type === "bottom" ? this.snappingPlantSprite : this.snappingPlantTop;
     
             ctx.drawImage(
                 sprite,
-                frame * this.snappingPlantFrameWidth, 0, // Source X and Y
-                this.snappingPlantFrameWidth, this.snappingPlantFrameHeight, // Source width and height
-                plant.x, plant.y, // Destination X and Y
-                this.snappingPlantFrameWidth * this.snappingPlantScale, this.snappingPlantFrameHeight * this.snappingPlantScale // Destination width and height
+                frame * this.snappingPlantFrameWidth, 0,
+                this.snappingPlantFrameWidth, this.snappingPlantFrameHeight,
+                plant.x, plant.y,
+                this.snappingPlantFrameWidth * this.snappingPlantScale,
+                this.snappingPlantFrameHeight * this.snappingPlantScale
             );
         });
     
