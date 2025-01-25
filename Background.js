@@ -21,7 +21,7 @@ class Background {
         this.pipeInterval = 1500;
 
         this.snappingPlantFrameWidth = 215; // Updated for new sprite sheet width
-        this.snappingPlantFrameHeight = 330; // Updated for new sprite sheet height
+        this.snappingPlantFrameHeight = 360; // Updated for new sprite sheet height
         this.snappingPlantTopFrameHeight = 50;
         this.snappingPlantFrameCount = 8; // Number of frames in the sprite sheet
         this.snappingPlantFrameDuration = 0.2; // Time per frame
