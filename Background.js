@@ -5,6 +5,7 @@ class Background {
         this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
+        this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
 
         this.width = 800;
         this.height = 600;
@@ -21,6 +22,7 @@ class Background {
 
         this.snappingPlantFrameWidth = 215; // Updated for new sprite sheet width
         this.snappingPlantFrameHeight = 330; // Updated for new sprite sheet height
+        this.snappingPlantTopFrameHeight = 50;
         this.snappingPlantFrameCount = 8; // Number of frames in the sprite sheet
         this.snappingPlantFrameDuration = 0.2; // Time per frame
 
@@ -41,10 +43,10 @@ class Background {
 
     spawnPipePair() {
         if (!this.gameStarted) return;
-
-        const opening = 120;
+    
+        const opening = 200; // Distance between top and bottom pipes
         const topPipeHeight = Math.random() * (this.baseY - this.pipeSpacing - opening);
-
+    
         // Top pipe
         this.pipeArray.push({
             x: this.width,
@@ -53,7 +55,7 @@ class Background {
             height: this.pipeHeight,
             flipped: true
         });
-
+    
         // Bottom pipe
         const bottomPipe = {
             x: this.width,
@@ -63,17 +65,30 @@ class Background {
             flipped: false
         };
         this.pipeArray.push(bottomPipe);
-
+    
         // Snapping plant on top of the bottom pipe
-        const plantX = bottomPipe.x + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
-        const plantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
-
+        const bottomPlantX = bottomPipe.x + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
+        const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
+    
         this.snappingPlants.push({
-            x: plantX,
-            y: plantY, // Align directly on top of the bottom pipe
-            elapsedTime: 0 // Track animation time for each plant
+            x: bottomPlantX,
+            y: bottomPlantY, // Align directly on top of the bottom pipe
+            elapsedTime: 0, // Track animation time for each plant
+            type: "bottom"
+        });
+    
+        // Snapping plant below the top pipe
+        const topPlantX = this.width + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
+        const topPlantY = topPipeHeight - (this.snappingPlantTopFrameHeight * this.snappingPlantScale);
+    
+        this.snappingPlants.push({
+            x: topPlantX,
+            y: topPlantY, // Align directly below the top pipe
+            elapsedTime: 0, // Track animation time for each plant
+            type: "top"
         });
     }
+    
 
     setupPipeSpawning() {
         setInterval(() => {
@@ -101,7 +116,7 @@ class Background {
 
     draw(ctx) {
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
-
+    
         this.pipeArray.forEach(pipe => {
             if (pipe.flipped) {
                 ctx.save();
@@ -117,20 +132,23 @@ class Background {
                 ctx.drawImage(this.pipeSprite, 0, 0, 50, 200, pipe.x, pipe.y, pipe.width, pipe.height);
             }
         });
-
+    
         this.snappingPlants.forEach(plant => {
             const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
+            const sprite = plant.type === "bottom" ? this.snappingPlantSprite : this.snappingPlantTop;
+    
             ctx.drawImage(
-                this.snappingPlantSprite,
+                sprite,
                 frame * this.snappingPlantFrameWidth, 0, // Source X and Y
                 this.snappingPlantFrameWidth, this.snappingPlantFrameHeight, // Source width and height
                 plant.x, plant.y, // Destination X and Y
                 this.snappingPlantFrameWidth * this.snappingPlantScale, this.snappingPlantFrameHeight * this.snappingPlantScale // Destination width and height
             );
         });
-
+    
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
     }
+    
 }
 
 canvas.addEventListener("keydown", (e) => {
