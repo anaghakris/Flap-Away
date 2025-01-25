@@ -8,7 +8,7 @@ class Bird {
         this.x = 200;
         this.y = 300;
         this.velocity = 0;
-        this.gravity = 0.3;  
+        this.gravity = 0.5;  
         this.lift = -4.8;   
         this.rotation = 0;
         this.maxRotationDown = Math.PI / 2;
