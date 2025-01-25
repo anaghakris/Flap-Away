@@ -4,6 +4,7 @@ class Background {
         this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
         this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
+        this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
 
         this.width = 800;
         this.height = 600;
@@ -13,9 +14,17 @@ class Background {
         this.pipeWidth = 50;
         this.pipeHeight = 200;
         this.pipeArray = [];
+        this.snappingPlants = [];
         this.pipeSpeed = 2;
         this.pipeSpacing = 200;
         this.pipeInterval = 1500;
+
+        this.snappingPlantFrameWidth = 215; // Updated for new sprite sheet width
+        this.snappingPlantFrameHeight = 330; // Updated for new sprite sheet height
+        this.snappingPlantFrameCount = 8; // Number of frames in the sprite sheet
+        this.snappingPlantFrameDuration = 0.2; // Time per frame
+
+        this.snappingPlantScale = 0.2; // Scale the snapping plant to appear smaller
 
         this.gameStarted = false;
         this.setupPipeSpawning();
@@ -36,6 +45,7 @@ class Background {
         const opening = 120;
         const topPipeHeight = Math.random() * (this.baseY - this.pipeSpacing - opening);
 
+        // Top pipe
         this.pipeArray.push({
             x: this.width,
             y: topPipeHeight - this.pipeHeight,
@@ -44,12 +54,24 @@ class Background {
             flipped: true
         });
 
-        this.pipeArray.push({
+        // Bottom pipe
+        const bottomPipe = {
             x: this.width,
             y: topPipeHeight + opening,
             width: this.pipeWidth,
             height: this.baseY - (topPipeHeight + opening),
             flipped: false
+        };
+        this.pipeArray.push(bottomPipe);
+
+        // Snapping plant on top of the bottom pipe
+        const plantX = bottomPipe.x + (this.pipeWidth / 2) - ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
+        const plantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
+
+        this.snappingPlants.push({
+            x: plantX,
+            y: plantY, // Align directly on top of the bottom pipe
+            elapsedTime: 0 // Track animation time for each plant
         });
     }
 
@@ -68,7 +90,13 @@ class Background {
             pipe.x -= this.pipeSpeed;
         });
 
+        this.snappingPlants.forEach(plant => {
+            plant.x -= this.pipeSpeed;
+            plant.elapsedTime += this.game.clockTick; // Update animation time
+        });
+
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
+        this.snappingPlants = this.snappingPlants.filter(plant => plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0); // Filter snapping plants
     }
 
     draw(ctx) {
@@ -88,6 +116,17 @@ class Background {
             } else {
                 ctx.drawImage(this.pipeSprite, 0, 0, 50, 200, pipe.x, pipe.y, pipe.width, pipe.height);
             }
+        });
+
+        this.snappingPlants.forEach(plant => {
+            const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
+            ctx.drawImage(
+                this.snappingPlantSprite,
+                frame * this.snappingPlantFrameWidth, 0, // Source X and Y
+                this.snappingPlantFrameWidth, this.snappingPlantFrameHeight, // Source width and height
+                plant.x, plant.y, // Destination X and Y
+                this.snappingPlantFrameWidth * this.snappingPlantScale, this.snappingPlantFrameHeight * this.snappingPlantScale // Destination width and height
+            );
         });
 
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
