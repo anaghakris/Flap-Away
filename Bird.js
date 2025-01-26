@@ -27,7 +27,7 @@ class Bird {
         if (this.game.gameOver) {
             this.velocity += this.gravity;
             this.y += this.velocity;
-            this.rotation = this.maxRotationDown; 
+            this.rotation = this.maxRotationDown;
             
             if (this.y > 565 - 70) {
                 this.y = 565 - 70;
