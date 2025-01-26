@@ -43,7 +43,7 @@ class Background {
     }
 
     spawnPipePair() {
-        if (!this.gameStarted) return;
+        if (!this.gameStarted || this.game.gameOver) return;
 
         const opening = 200;
         const topPipeHeight = Math.random() * (this.baseY - this.pipeSpacing - opening);
@@ -96,14 +96,14 @@ class Background {
 
     setupPipeSpawning() {
         setInterval(() => {
-            if (this.gameStarted) {
+            if (this.gameStarted && !this.game.gameOver) {
                 this.spawnPipePair();
             }
         }, this.pipeInterval);
     }
 
     update() {
-        if (!this.gameStarted) return;
+        if (!this.gameStarted || this.game.gameOver) return;
 
         this.pipeArray.forEach(pipe => {
             pipe.x -= this.pipeSpeed;
@@ -114,8 +114,51 @@ class Background {
             plant.elapsedTime += this.game.clockTick;
         });
 
+        const bird = this.getBird();
+        if (bird) {
+            for (const pipe of this.pipeArray) {
+                if (this.checkCollision(bird, pipe)) {
+                    this.game.gameOver = true;
+                    bird.velocity = 0;
+                    bird.rotation = bird.maxRotationDown;
+                    break;
+                }
+            }
+        }
+
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
         this.snappingPlants = this.snappingPlants.filter(plant => plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0);
+    }
+
+    getBird() {
+        for (const entity of this.game.entities) {
+            if (entity instanceof Bird) {
+                return entity;
+            }
+        }
+        return null;
+    }
+
+    checkCollision(bird, pipe) {
+        const scaledWidth = 34 * 1.2;
+        const scaledHeight = 70 * 1.2;
+        const birdCenterX = bird.x + scaledWidth / 2;
+        const birdCenterY = bird.y + scaledHeight / 2;
+        const birdRadius = scaledWidth * 0.3; 
+    
+        const pipeLeft = pipe.x + 10;
+        const pipeRight = pipe.x + pipe.width - 10;
+        const pipeTop = pipe.y;
+        const pipeBottom = pipe.y + pipe.height;
+    
+        const closestX = Math.max(pipeLeft, Math.min(birdCenterX, pipeRight));
+        const closestY = Math.max(pipeTop, Math.min(birdCenterY, pipeBottom));
+        
+        const dx = birdCenterX - closestX;
+        const dy = birdCenterY - closestY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+    
+        return distance < birdRadius;
     }
 
     draw(ctx) {
@@ -157,12 +200,19 @@ class Background {
             );
         });
 
+        if (this.game.options.debugging) {
+            this.pipeArray.forEach(pipe => {
+                ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(
+                    pipe.x + 10,
+                    pipe.y,
+                    pipe.width - 20,
+                    pipe.height
+                );
+            });
+        }
+
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
     }
 }
-
-canvas.addEventListener("keydown", (e) => {
-    if (e.key === " " && !background.gameStarted) {
-        background.startGame();
-    }
-});

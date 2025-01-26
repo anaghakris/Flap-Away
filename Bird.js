@@ -8,8 +8,8 @@ class Bird {
         this.x = 200;
         this.y = 300;
         this.velocity = 0;
-        this.gravity = 0.5;  
-        this.lift = -4.8;   
+        this.gravity = 0.5;
+        this.lift = -4.8;
         this.rotation = 0;
         this.maxRotationDown = Math.PI / 2;
         this.maxRotationUp = -Math.PI / 8;
@@ -23,6 +23,18 @@ class Bird {
 
     update() {
         if (!this.gameStarted) return;
+
+        if (this.game.gameOver) {
+            this.velocity += this.gravity;
+            this.y += this.velocity;
+            this.rotation = this.maxRotationDown; 
+            
+            if (this.y > 565 - 70) {
+                this.y = 565 - 70;
+                this.velocity = 0;
+            }
+            return;
+        }
 
         this.velocity += this.gravity;
         this.velocity *= 0.95;
@@ -43,7 +55,7 @@ class Bird {
             this.y = 565 - 70;
             this.velocity = 0;
             this.rotation = this.maxRotationDown;
-            game.gameOver = true;
+            this.game.gameOver = true;
         }
     }
 
@@ -54,6 +66,24 @@ class Bird {
         ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2));
         const scale = 0.6;
         this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
+
+        if (this.game.options.debugging) {
+            const scaledWidth = 34 * 1.2;
+            const scaledHeight = 70 * 1.2;
+            const birdRadius = scaledWidth * 0.2;
+            ctx.beginPath();
+            ctx.arc(
+                this.x + scaledWidth / 2,
+                this.y + scaledHeight / 2,
+                birdRadius,
+                0,
+                2 * Math.PI
+            );
+            ctx.strokeStyle = "red";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
         ctx.restore();
     }
 }
