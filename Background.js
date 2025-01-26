@@ -140,26 +140,30 @@ class Background {
     }
 
     checkCollision(bird, pipe) {
-        const scaledWidth = 34 * 1.2;
-        const scaledHeight = 70 * 1.2;
-        const birdCenterX = bird.x + scaledWidth / 2;
-        const birdCenterY = bird.y + scaledHeight / 2;
-        const birdRadius = scaledWidth * 0.3; 
+        const birdWidth = 34 * 1.2; // Scaled bird width
+        const birdHeight = 70 * 1.2; // Scaled bird height
     
-        const pipeLeft = pipe.x + 10;
-        const pipeRight = pipe.x + pipe.width - 10;
+        // Bird's bounding box
+        const birdLeft = bird.x;
+        const birdRight = bird.x + birdWidth;
+        const birdTop = bird.y;
+        const birdBottom = bird.y + birdHeight;
+    
+        // Pipe's bounding box
+        const pipeLeft = pipe.x;
+        const pipeRight = pipe.x + pipe.width;
         const pipeTop = pipe.y;
         const pipeBottom = pipe.y + pipe.height;
     
-        const closestX = Math.max(pipeLeft, Math.min(birdCenterX, pipeRight));
-        const closestY = Math.max(pipeTop, Math.min(birdCenterY, pipeBottom));
-        
-        const dx = birdCenterX - closestX;
-        const dy = birdCenterY - closestY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-    
-        return distance < birdRadius;
+        // Check for overlap in bounding boxes
+        return (
+            birdRight > pipeLeft &&
+            birdLeft < pipeRight &&
+            birdBottom > pipeTop &&
+            birdTop < pipeBottom
+        );
     }
+    
 
     draw(ctx) {
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
