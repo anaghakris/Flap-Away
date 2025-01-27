@@ -17,6 +17,8 @@ class Bird {
         this.smoothingFactor = 0.15;
 
         this.flapSound = ASSET_MANAGER.getAsset("./audio/sfx_wing.wav");
+        this.lastFlapTime = 0;        
+        this.flapCooldown = 250;  
     }
 
     startGame() {
@@ -45,9 +47,18 @@ class Bird {
         if (this.game.keys[" "]) {
             this.velocity = this.lift;
 
-            if (this.flapSound) {
-                this.flapSound.currentTime = 0; 
-                this.flapSound.play();
+            const currentTime = Date.now();
+            if (currentTime - this.lastFlapTime >= this.flapCooldown) {
+                if (this.flapSound) {
+                    this.flapSound.pause();
+                    this.flapSound.currentTime = 0;
+                    
+                    const flapSoundClone = this.flapSound.cloneNode();
+                    flapSoundClone.volume = 0.5;  
+                    flapSoundClone.play().catch(e => console.log("Audio play failed:", e));
+                }
+                
+                this.lastFlapTime = currentTime;
             }
         }
 
