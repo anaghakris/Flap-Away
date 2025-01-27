@@ -15,12 +15,12 @@ class Bird {
         this.maxRotationUp = -Math.PI / 8;
         this.gameStarted = false;
         this.smoothingFactor = 0.15;
-        this.animationStarted = false;  
+        this.isFlapping = true; // Controls whether the animation plays
 
         this.flapSound = ASSET_MANAGER.getAsset("./audio/sfx_wing.wav");
         this.dieSound = ASSET_MANAGER.getAsset("./audio/sfx_die.wav");
         this.hasPlayedDieSound = false;
-        this.lastFlapTime = 0;        
+        this.lastFlapTime = 0;
         this.flapCooldown = 250;
     }
 
@@ -35,14 +35,14 @@ class Bird {
             this.velocity += this.gravity;
             this.y += this.velocity;
             this.rotation = this.maxRotationDown;
-            this.animationStarted = false; 
+            this.isFlapping = false; // Stop animation on death
 
             if (!this.hasPlayedDieSound && this.dieSound) {
                 this.dieSound.currentTime = 0;
                 this.dieSound.play();
                 this.hasPlayedDieSound = true;
             }
-            
+
             if (this.y > 565 - 70) {
                 this.y = 565 - 70;
                 this.velocity = 0;
@@ -56,29 +56,26 @@ class Bird {
 
         if (this.game.keys[" "]) {
             this.velocity = this.lift;
-            if (!this.animationStarted) {
-                this.animationStarted = true;  
-            }
 
             const currentTime = Date.now();
             if (currentTime - this.lastFlapTime >= this.flapCooldown) {
                 if (this.flapSound) {
                     this.flapSound.pause();
                     this.flapSound.currentTime = 0;
-                    
+
                     const flapSoundClone = this.flapSound.cloneNode();
-                    flapSoundClone.volume = 0.5;  
+                    flapSoundClone.volume = 0.5;
                     flapSoundClone.play().catch(e => console.log("Audio play failed:", e));
                 }
-                
+
                 this.lastFlapTime = currentTime;
             }
         }
 
-        const targetRotation = this.velocity > 0 
+        const targetRotation = this.velocity > 0
             ? Math.min(this.maxRotationDown, this.velocity / 8)
             : Math.max(this.maxRotationUp, this.velocity / 8);
-            
+
         this.rotation += (targetRotation - this.rotation) * this.smoothingFactor;
 
         if (this.y < 0) this.y = 0;
@@ -96,10 +93,12 @@ class Bird {
         ctx.rotate(this.rotation);
         ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2));
         const scale = 0.6;
-        
-        if (this.animationStarted) {
+
+        // Only draw the animation if the bird is flapping
+        if (this.isFlapping) {
             this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
         } else {
+            // Draw a static frame when the bird is not flapping
             ctx.drawImage(
                 this.animator.spritesheet,
                 0, 0, 34, 70, 
