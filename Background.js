@@ -6,6 +6,8 @@ class Background {
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
+        this.pointSound = ASSET_MANAGER.getAsset("./audio/sfx_point.wav");
+
 
         this.width = 800;
         this.height = 600;
@@ -53,7 +55,8 @@ class Background {
             y: topPipeHeight - this.pipeHeight,
             width: this.pipeWidth,
             height: this.pipeHeight,
-            flipped: true
+            flipped: true,
+            passed: false
         });
 
         const bottomPipe = {
@@ -61,7 +64,8 @@ class Background {
             y: topPipeHeight + opening,
             width: this.pipeWidth,
             height: this.baseY - (topPipeHeight + opening),
-            flipped: false
+            flipped: false,
+            passed: false
         };
         this.pipeArray.push(bottomPipe);
 
@@ -110,18 +114,28 @@ class Background {
 
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
-
+    
         this.pipeArray.forEach(pipe => {
             pipe.x -= this.pipeSpeed;
         });
-
+    
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
             plant.elapsedTime += this.game.clockTick;
         });
-
+    
         const bird = this.getBird();
         if (bird) {
+            this.pipeArray.forEach(pipe => {
+                if (!pipe.passed && bird.x > pipe.x + pipe.width && pipe.flipped) {
+                    pipe.passed = true;
+                    if (this.pointSound) {
+                        this.pointSound.currentTime = 0;
+                        this.pointSound.play();
+                    }
+                }
+            });
+    
             for (const pipe of this.pipeArray) {
                 if (this.checkCollision(bird, pipe)) {
                     this.game.gameOver = true;
@@ -130,7 +144,7 @@ class Background {
                     break;
                 }
             }
-
+    
             for (const plant of this.snappingPlants.filter(plant => plant.elapsedTime >= 0)) {
                 if (this.checkPlantCollision(bird, plant)) {
                     this.game.gameOver = true;
@@ -140,16 +154,17 @@ class Background {
                 }
             }
         }
-
+    
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
-        
+    
         this.snappingPlants = this.snappingPlants.filter(plant => {
             const isOnScreen = plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0;
-            const hasCompletedAnimation = plant.elapsedTime >= 0 && 
+            const hasCompletedAnimation = plant.elapsedTime >= 0 &&
                 plant.elapsedTime > this.snappingPlantFrameDuration * this.snappingPlantFrameCount;
             return isOnScreen && !hasCompletedAnimation;
         });
     }
+    
 
     getBird() {
         for (const entity of this.game.entities) {
