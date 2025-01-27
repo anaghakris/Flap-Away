@@ -11,6 +11,7 @@ ASSET_MANAGER.queueDownload("./Sprites/Pipes/SnappingPlant.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/snapping plants top.png");
 ASSET_MANAGER.queueDownload("./audio/sfx_wing.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_point.wav");
+ASSET_MANAGER.queueDownload("./audio/sfx_die.wav");
 
 
 

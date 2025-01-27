@@ -17,6 +17,8 @@ class Bird {
         this.smoothingFactor = 0.15;
 
         this.flapSound = ASSET_MANAGER.getAsset("./audio/sfx_wing.wav");
+        this.dieSound = ASSET_MANAGER.getAsset("./audio/sfx_die.wav");
+        this.hasPlayedDieSound = false;
         this.lastFlapTime = 0;        
         this.flapCooldown = 250;  
     }
@@ -32,6 +34,12 @@ class Bird {
             this.velocity += this.gravity;
             this.y += this.velocity;
             this.rotation = this.maxRotationDown;
+
+            if (!this.hasPlayedDieSound && this.dieSound) {
+                this.dieSound.currentTime = 0;
+                this.dieSound.play();
+                this.hasPlayedDieSound = true; // Mark the sound as played
+            }
             
             if (this.y > 565 - 70) {
                 this.y = 565 - 70;
