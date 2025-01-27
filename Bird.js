@@ -15,6 +15,8 @@ class Bird {
         this.maxRotationUp = -Math.PI / 8;
         this.gameStarted = false;
         this.smoothingFactor = 0.15;
+
+        this.flapSound = ASSET_MANAGER.getAsset("./audio/sfx_wing.wav");
     }
 
     startGame() {
@@ -42,6 +44,11 @@ class Bird {
 
         if (this.game.keys[" "]) {
             this.velocity = this.lift;
+
+            if (this.flapSound) {
+                this.flapSound.currentTime = 0; 
+                this.flapSound.play();
+            }
         }
 
         const targetRotation = this.velocity > 0 
