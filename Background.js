@@ -7,7 +7,7 @@ class Background {
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
         this.pointSound = ASSET_MANAGER.getAsset("./audio/sfx_point.wav");
-
+        this.hitSound = ASSET_MANAGER.getAsset("./audio/sfx_hit.wav"); 
 
         this.width = 800;
         this.height = 600;
@@ -138,6 +138,10 @@ class Background {
     
             for (const pipe of this.pipeArray) {
                 if (this.checkCollision(bird, pipe)) {
+                    if (this.hitSound) {
+                        this.hitSound.currentTime = 0;
+                        this.hitSound.play(); // Play the collision sound when hitting a pipe
+                    }
                     this.game.gameOver = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
@@ -147,6 +151,10 @@ class Background {
     
             for (const plant of this.snappingPlants.filter(plant => plant.elapsedTime >= 0)) {
                 if (this.checkPlantCollision(bird, plant)) {
+                    if (this.hitSound) {
+                        this.hitSound.currentTime = 0;
+                        this.hitSound.play(); // Play the collision sound when hitting a plant
+                    }
                     this.game.gameOver = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
