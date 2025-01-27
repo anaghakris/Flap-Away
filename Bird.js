@@ -15,12 +15,13 @@ class Bird {
         this.maxRotationUp = -Math.PI / 8;
         this.gameStarted = false;
         this.smoothingFactor = 0.15;
+        this.animationStarted = false;  
 
         this.flapSound = ASSET_MANAGER.getAsset("./audio/sfx_wing.wav");
         this.dieSound = ASSET_MANAGER.getAsset("./audio/sfx_die.wav");
         this.hasPlayedDieSound = false;
         this.lastFlapTime = 0;        
-        this.flapCooldown = 250;  
+        this.flapCooldown = 250;
     }
 
     startGame() {
@@ -34,11 +35,12 @@ class Bird {
             this.velocity += this.gravity;
             this.y += this.velocity;
             this.rotation = this.maxRotationDown;
+            this.animationStarted = false; 
 
             if (!this.hasPlayedDieSound && this.dieSound) {
                 this.dieSound.currentTime = 0;
                 this.dieSound.play();
-                this.hasPlayedDieSound = true; // Mark the sound as played
+                this.hasPlayedDieSound = true;
             }
             
             if (this.y > 565 - 70) {
@@ -54,6 +56,9 @@ class Bird {
 
         if (this.game.keys[" "]) {
             this.velocity = this.lift;
+            if (!this.animationStarted) {
+                this.animationStarted = true;  
+            }
 
             const currentTime = Date.now();
             if (currentTime - this.lastFlapTime >= this.flapCooldown) {
@@ -91,9 +96,19 @@ class Bird {
         ctx.rotate(this.rotation);
         ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2));
         const scale = 0.6;
-        this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
+        
+        if (this.animationStarted) {
+            this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
+        } else {
+            ctx.drawImage(
+                this.animator.spritesheet,
+                0, 0, 34, 70, 
+                this.x, this.y, 
+                34 * 2 * scale, 70 * 2 * scale
+            );
+        }
 
-        if (this.game.options.debugging) {
+        if (this.game.options && this.game.options.debugging) {
             const scaledWidth = 34 * 1.2;
             const scaledHeight = 70 * 1.2;
             const birdRadius = scaledWidth * 0.2;
