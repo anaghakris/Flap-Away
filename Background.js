@@ -69,7 +69,6 @@ class Background {
             const addTopPlant = Math.random() < 0.5;
 
             if (addTopPlant) {
-                // Add top plant
                 const topPlantX = this.width + (this.pipeWidth / 2) - 
                     ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
                 const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * 
@@ -83,7 +82,6 @@ class Background {
                     type: "top"
                 });
             } else {
-                // Add bottom plant
                 const bottomPlantX = bottomPipe.x + (this.pipeWidth / 2) - 
                     ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
                 const bottomPlantY = bottomPipe.y - 
@@ -133,7 +131,6 @@ class Background {
                 }
             }
 
-            // Only check collision for plants that are actively animating
             for (const plant of this.snappingPlants.filter(plant => plant.elapsedTime >= 0)) {
                 if (this.checkPlantCollision(bird, plant)) {
                     this.game.gameOver = true;
@@ -145,9 +142,13 @@ class Background {
         }
 
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
-        this.snappingPlants = this.snappingPlants.filter(plant => 
-            plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0
-        );
+        
+        this.snappingPlants = this.snappingPlants.filter(plant => {
+            const isOnScreen = plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0;
+            const hasCompletedAnimation = plant.elapsedTime >= 0 && 
+                plant.elapsedTime > this.snappingPlantFrameDuration * this.snappingPlantFrameCount;
+            return isOnScreen && !hasCompletedAnimation;
+        });
     }
 
     getBird() {
@@ -160,16 +161,17 @@ class Background {
     }
 
     checkCollision(bird, pipe) {
-        const birdWidth = 34 * 1.2;
-        const birdHeight = 70 * 1.2;
+        const birdWidth = 34 * 0.8;
+        const birdHeight = 70 * 0.8;
+        const PIPE_PADDING = 15;
 
-        const birdLeft = bird.x;
-        const birdRight = bird.x + birdWidth;
-        const birdTop = bird.y;
-        const birdBottom = bird.y + birdHeight;
+        const birdLeft = bird.x + (34 * 1.2 - birdWidth) / 2;
+        const birdRight = birdLeft + birdWidth;
+        const birdTop = bird.y + (70 * 1.2 - birdHeight) / 2;
+        const birdBottom = birdTop + birdHeight;
 
-        const pipeLeft = pipe.x;
-        const pipeRight = pipe.x + pipe.width;
+        const pipeLeft = pipe.x + PIPE_PADDING;
+        const pipeRight = pipe.x + pipe.width - PIPE_PADDING;
         const pipeTop = pipe.y;
         const pipeBottom = pipe.y + pipe.height;
 
@@ -182,21 +184,33 @@ class Background {
     }
 
     checkPlantCollision(bird, plant) {
-        const birdWidth = 34 * 1.2;
-        const birdHeight = 70 * 1.2;
+        if (plant.elapsedTime < 0) return false;
+        
+        const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % 
+            this.snappingPlantFrameCount;
+        
+        if (frame < 2 || frame > 6 || plant.elapsedTime > this.snappingPlantFrameDuration * this.snappingPlantFrameCount) {
+            return false;
+        }
 
-        const birdLeft = bird.x;
-        const birdRight = bird.x + birdWidth;
-        const birdTop = bird.y;
-        const birdBottom = bird.y + birdHeight;
+        const birdWidth = 34 * 0.8;
+        const birdHeight = 70 * 0.8;
 
-        const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
-        const plantHeight = this.snappingPlantFrameHeight * this.snappingPlantScale;
+        const birdLeft = bird.x + (34 * 1.2 - birdWidth) / 2;
+        const birdRight = birdLeft + birdWidth;
+        const birdTop = bird.y + (70 * 1.2 - birdHeight) / 2;
+        const birdBottom = birdTop + birdHeight;
 
-        const plantLeft = plant.x;
-        const plantRight = plant.x + plantWidth;
-        const plantTop = plant.y;
-        const plantBottom = plant.y + plantHeight;
+        const plantVisualWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
+        const plantVisualHeight = this.snappingPlantFrameHeight * this.snappingPlantScale;
+        
+        const plantWidth = plantVisualWidth * 0.6;
+        const plantHeight = plantVisualHeight * 0.6;
+
+        const plantLeft = plant.x + (plantVisualWidth - plantWidth) / 2;
+        const plantRight = plantLeft + plantWidth;
+        const plantTop = plant.y + (plantVisualHeight - plantHeight) / 2;
+        const plantBottom = plantTop + plantHeight;
 
         return (
             birdRight > plantLeft &&
@@ -246,31 +260,6 @@ class Background {
                 this.snappingPlantFrameHeight * this.snappingPlantScale
             );
         });
-
-        if (this.game.options.debugging) {
-            this.pipeArray.forEach(pipe => {
-                ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(
-                    pipe.x + 10,
-                    pipe.y,
-                    pipe.width - 20,
-                    pipe.height
-                );
-            });
-
-            // Debugging for snapping plants
-            this.snappingPlants
-                .filter(plant => plant.elapsedTime >= 0)
-                .forEach(plant => {
-                    const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
-                    const plantHeight = this.snappingPlantFrameHeight * this.snappingPlantScale;
-
-                    ctx.strokeStyle = "rgba(0, 255, 0, 0.5)";
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(plant.x, plant.y, plantWidth, plantHeight);
-                });
-        }
 
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
     }
