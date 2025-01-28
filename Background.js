@@ -76,7 +76,7 @@ class Background {
                 const topPlantX = this.width + (this.pipeWidth / 2) - 
                     ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
                 const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * 
-                    this.snappingPlantScale + 10;
+                    this.snappingPlantScale + 18;
                 const topDelay = Math.random() * 3;
 
                 this.snappingPlants.push({
