@@ -22,13 +22,13 @@ class Background {
         this.pipeSpacing = 200;
         this.pipeInterval = 1500;
 
-        this.snappingPlantFrameWidth = 215;
-        this.snappingPlantFrameHeight = 360;
-        this.snappingPlantTopFrameHeight = 90;
-        this.snappingPlantFrameCount = 8;
-        this.snappingPlantFrameDuration = 0.4;
+        this.snappingPlantFrameWidth = 158;   
+        this.snappingPlantFrameHeight = 250;  
+        this.snappingPlantTopFrameHeight = 90; 
+        this.snappingPlantFrameCount = 6;     
+        this.snappingPlantFrameDuration = 0.3; 
 
-        this.snappingPlantScale = 0.2;
+        this.snappingPlantScale = 0.35;
 
         this.gameStarted = false;
         this.pipePairCount = 0;
