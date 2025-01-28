@@ -28,7 +28,7 @@ class Background {
         this.snappingPlantFrameCount = 6;     
         this.snappingPlantFrameDuration = 0.3; 
 
-        this.snappingPlantScale = 0.35;
+        this.snappingPlantScale = 0.3;
 
         this.gameStarted = false;
         this.pipePairCount = 0;
