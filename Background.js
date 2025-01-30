@@ -7,7 +7,7 @@ class Background {
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
         this.pointSound = ASSET_MANAGER.getAsset("./audio/sfx_point.wav");
-        this.hitSound = ASSET_MANAGER.getAsset("./audio/sfx_hit.wav"); 
+        this.hitSound = ASSET_MANAGER.getAsset("./audio/sfx_hit.wav");
 
         this.width = 800;
         this.height = 600;
@@ -22,16 +22,29 @@ class Background {
         this.pipeSpacing = 200;
         this.pipeInterval = 1500;
 
-        this.snappingPlantFrameWidth = 158;   
-        this.snappingPlantFrameHeight = 250;  
-        this.snappingPlantTopFrameHeight = 90; 
-        this.snappingPlantFrameCount = 6;     
-        this.snappingPlantFrameDuration = 0.3; 
-
+        this.snappingPlantFrameWidth = 158;
+        this.snappingPlantFrameHeight = 250;
+        this.snappingPlantTopFrameHeight = 90;
+        this.snappingPlantFrameCount = 6;
+        this.snappingPlantFrameDuration = 0.3;
         this.snappingPlantScale = 0.3;
 
         this.gameStarted = false;
         this.pipePairCount = 0;
+        
+        this.pipeSpawnInterval = null;
+        this.setupPipeSpawning();
+    }
+
+    reset() {
+        this.pipeArray = [];
+        this.snappingPlants = [];
+        this.gameStarted = false;
+        this.pipePairCount = 0;
+        
+        if (this.pipeSpawnInterval) {
+            clearInterval(this.pipeSpawnInterval);
+        }
         this.setupPipeSpawning();
     }
 
@@ -42,6 +55,14 @@ class Background {
                 entity.startGame();
             }
         });
+    }
+
+    setupPipeSpawning() {
+        this.pipeSpawnInterval = setInterval(() => {
+            if (this.gameStarted && !this.game.gameOver) {
+                this.spawnPipePair();
+            }
+        }, this.pipeInterval);
     }
 
     spawnPipePair() {
@@ -73,9 +94,9 @@ class Background {
             const addTopPlant = Math.random() < 0.5;
 
             if (addTopPlant) {
-                const topPlantX = this.width + (this.pipeWidth / 2) - 
+                const topPlantX = this.width + (this.pipeWidth / 2) -
                     ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
-                const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * 
+                const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight *
                     this.snappingPlantScale + 18;
                 const topDelay = Math.random() * 3;
 
@@ -86,9 +107,9 @@ class Background {
                     type: "top"
                 });
             } else {
-                const bottomPlantX = bottomPipe.x + (this.pipeWidth / 2) - 
+                const bottomPlantX = bottomPipe.x + (this.pipeWidth / 2) -
                     ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
-                const bottomPlantY = bottomPipe.y - 
+                const bottomPlantY = bottomPipe.y -
                     (this.snappingPlantFrameHeight * this.snappingPlantScale);
                 const bottomDelay = Math.random() * 1;
 
@@ -104,43 +125,36 @@ class Background {
         this.pipePairCount++;
     }
 
-    setupPipeSpawning() {
-        setInterval(() => {
-            if (this.gameStarted && !this.game.gameOver) {
-                this.spawnPipePair();
-            }
-        }, this.pipeInterval);
-    }
-
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
-    
+
         this.pipeArray.forEach(pipe => {
             pipe.x -= this.pipeSpeed;
         });
-    
+
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
             plant.elapsedTime += this.game.clockTick;
         });
-    
+
         const bird = this.getBird();
         if (bird) {
             this.pipeArray.forEach(pipe => {
                 if (!pipe.passed && bird.x > pipe.x + pipe.width && pipe.flipped) {
                     pipe.passed = true;
+                    bird.score++;
                     if (this.pointSound) {
                         this.pointSound.currentTime = 0;
                         this.pointSound.play();
                     }
                 }
             });
-    
+
             for (const pipe of this.pipeArray) {
                 if (this.checkCollision(bird, pipe)) {
                     if (this.hitSound) {
                         this.hitSound.currentTime = 0;
-                        this.hitSound.play(); // Play the collision sound when hitting a pipe
+                        this.hitSound.play();
                     }
                     this.game.gameOver = true;
                     bird.velocity = 0;
@@ -148,12 +162,12 @@ class Background {
                     break;
                 }
             }
-    
+
             for (const plant of this.snappingPlants.filter(plant => plant.elapsedTime >= 0)) {
                 if (this.checkPlantCollision(bird, plant)) {
                     if (this.hitSound) {
                         this.hitSound.currentTime = 0;
-                        this.hitSound.play(); // Play the collision sound when hitting a plant
+                        this.hitSound.play();
                     }
                     this.game.gameOver = true;
                     bird.velocity = 0;
@@ -162,9 +176,8 @@ class Background {
                 }
             }
         }
-    
+
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
-    
         this.snappingPlants = this.snappingPlants.filter(plant => {
             const isOnScreen = plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0;
             const hasCompletedAnimation = plant.elapsedTime >= 0 &&
@@ -172,15 +185,9 @@ class Background {
             return isOnScreen && !hasCompletedAnimation;
         });
     }
-    
 
     getBird() {
-        for (const entity of this.game.entities) {
-            if (entity instanceof Bird) {
-                return entity;
-            }
-        }
-        return null;
+        return this.game.entities.find(entity => entity instanceof Bird) || null;
     }
 
     checkCollision(bird, pipe) {
@@ -212,7 +219,8 @@ class Background {
         const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % 
             this.snappingPlantFrameCount;
         
-        if (frame < 2 || frame > 6 || plant.elapsedTime > this.snappingPlantFrameDuration * this.snappingPlantFrameCount) {
+        if (frame < 2 || frame > 6 || plant.elapsedTime > this.snappingPlantFrameDuration * 
+            this.snappingPlantFrameCount) {
             return false;
         }
 
@@ -269,9 +277,9 @@ class Background {
         this.snappingPlants.forEach(plant => {
             if (plant.elapsedTime < 0) return;
 
-            const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % 
+            const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) %
                 this.snappingPlantFrameCount;
-            const sprite = plant.type === "bottom" ? 
+            const sprite = plant.type === "bottom" ?
                 this.snappingPlantSprite : this.snappingPlantTop;
 
             ctx.drawImage(
@@ -285,5 +293,26 @@ class Background {
         });
 
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
+
+        if (this.game.gameOver) {
+            ctx.font = "48px Arial";
+            ctx.fillStyle = "white";
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 3;
+            ctx.textAlign = "center";
+            ctx.strokeText("Game Over", this.width / 2, this.height / 2);
+            ctx.fillText("Game Over", this.width / 2, this.height / 2);
+            ctx.font = "24px Arial";
+            ctx.strokeText("Press Space to Restart", this.width / 2, this.height / 2 + 40);
+            ctx.fillText("Press Space to Restart", this.width / 2, this.height / 2 + 40);
+        } else if (!this.gameStarted) {
+            ctx.font = "24px Arial";
+            ctx.fillStyle = "white";
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 3;
+            ctx.textAlign = "center";
+            ctx.strokeText("Press Space to Start", this.width / 2, this.height / 2);
+            ctx.fillText("Press Space to Start", this.width / 2, this.height / 2);
+        }
     }
 }

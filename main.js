@@ -41,10 +41,17 @@ ASSET_MANAGER.downloadAll(() => {
 
 
     canvas.addEventListener("keydown", (e) => {
-        if (e.key === " " && !background.gameStarted) {
+        if (e.key === " " && gameEngine.gameOver) {
+            gameEngine.gameOver = false;
+            gameEngine.entities.forEach(entity => {
+                if (entity.reset) {
+                    entity.reset();
+                }
+            });
+        } else if (e.key === " " && !background.gameStarted) {
             background.startGame(); 
         }
-    });
+    });    
 
     gameEngine.start();
 });

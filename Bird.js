@@ -15,13 +15,27 @@ class Bird {
         this.maxRotationUp = -Math.PI / 8;
         this.gameStarted = false;
         this.smoothingFactor = 0.15;
-        this.isFlapping = true; // Controls whether the animation plays
+        this.isFlapping = true;
 
         this.flapSound = ASSET_MANAGER.getAsset("./audio/sfx_wing.wav");
         this.dieSound = ASSET_MANAGER.getAsset("./audio/sfx_die.wav");
         this.hasPlayedDieSound = false;
         this.lastFlapTime = 0;
         this.flapCooldown = 250;
+
+        this.score = 0;
+    }
+
+    reset() {
+        this.x = 200;
+        this.y = 300;
+        this.velocity = 0;
+        this.rotation = 0;
+        this.gameStarted = false;
+        this.isFlapping = true;
+        this.hasPlayedDieSound = false;
+        this.lastFlapTime = 0;
+        this.score = 0;
     }
 
     startGame() {
@@ -35,7 +49,7 @@ class Bird {
             this.velocity += this.gravity;
             this.y += this.velocity;
             this.rotation = this.maxRotationDown;
-            this.isFlapping = false; // Stop animation on death
+            this.isFlapping = false;
 
             if (!this.hasPlayedDieSound && this.dieSound) {
                 this.dieSound.currentTime = 0;
@@ -94,11 +108,9 @@ class Bird {
         ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2));
         const scale = 0.6;
 
-        // Only draw the animation if the bird is flapping
         if (this.isFlapping) {
             this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
         } else {
-            // Draw a static frame when the bird is not flapping
             ctx.drawImage(
                 this.animator.spritesheet,
                 0, 0, 34, 70, 
@@ -125,5 +137,12 @@ class Bird {
         }
 
         ctx.restore();
+
+        ctx.font = "30px Arial";
+        ctx.fillStyle = "white";
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 3;
+        ctx.strokeText(this.score.toString(), 400, 50);
+        ctx.fillText(this.score.toString(), 400, 50);
     }
 }
