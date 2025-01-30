@@ -24,6 +24,11 @@ class Bird {
         this.flapCooldown = 250;
 
         this.score = 0;
+
+        // Hitbox parameters
+        this.BIRD_WIDTH = 34 * 0.7;
+        this.BIRD_HEIGHT = 70 * 0.7;
+        this.BIRD_X_OFFSET = 10;
     }
 
     reset() {
@@ -108,6 +113,7 @@ class Bird {
         ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2));
         const scale = 0.6;
 
+        // Draw the bird sprite
         if (this.isFlapping) {
             this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
         } else {
@@ -119,25 +125,19 @@ class Bird {
             );
         }
 
-        if (this.game.options && this.game.options.debugging) {
-            const scaledWidth = 34 * 1.2;
-            const scaledHeight = 70 * 1.2;
-            const birdRadius = scaledWidth * 0.2;
-            ctx.beginPath();
-            ctx.arc(
-                this.x + scaledWidth / 2,
-                this.y + scaledHeight / 2,
-                birdRadius,
-                0,
-                2 * Math.PI
-            );
-            ctx.strokeStyle = "red";
-            ctx.lineWidth = 2;
-            ctx.stroke();
-        }
+        // Draw bird hitbox (in red)
+        const birdLeft = this.x + this.BIRD_X_OFFSET;
+        const birdTop = this.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        const birdWidth = this.BIRD_WIDTH;
+        const birdHeight = this.BIRD_HEIGHT;
+
+        ctx.strokeStyle = "red"; // Set hitbox color to red
+        ctx.lineWidth = 2; // Set hitbox line thickness
+        ctx.strokeRect(birdLeft, birdTop, birdWidth, birdHeight); // Draw the hitbox
 
         ctx.restore();
 
+        // Draw the score
         ctx.font = "30px Arial";
         ctx.fillStyle = "white";
         ctx.strokeStyle = "black";

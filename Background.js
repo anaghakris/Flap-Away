@@ -34,6 +34,15 @@ class Background {
         
         this.pipeSpawnInterval = null;
         this.setupPipeSpawning();
+
+        this.SHOW_HITBOXES = true;
+        this.BIRD_WIDTH = 34 * 0.7;
+        this.BIRD_HEIGHT = 70 * 0.7;
+        this.BIRD_X_OFFSET = 10;
+        this.PIPE_HORIZONTAL_PADDING = 8;
+        this.PIPE_VERTICAL_PADDING = 10;
+        this.PLANT_COLLISION_WIDTH_FACTOR = 0.5;
+        this.PLANT_COLLISION_HEIGHT_FACTOR = 0.4;
     }
 
     reset() {
@@ -191,19 +200,15 @@ class Background {
     }
 
     checkCollision(bird, pipe) {
-        const birdWidth = 34 * 0.8;
-        const birdHeight = 70 * 0.8;
-        const PIPE_PADDING = 15;
+        const birdLeft = bird.x + this.BIRD_X_OFFSET;
+        const birdRight = birdLeft + this.BIRD_WIDTH;
+        const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        const birdBottom = birdTop + this.BIRD_HEIGHT;
 
-        const birdLeft = bird.x + (34 * 1.2 - birdWidth) / 2;
-        const birdRight = birdLeft + birdWidth;
-        const birdTop = bird.y + (70 * 1.2 - birdHeight) / 2;
-        const birdBottom = birdTop + birdHeight;
-
-        const pipeLeft = pipe.x + PIPE_PADDING;
-        const pipeRight = pipe.x + pipe.width - PIPE_PADDING;
-        const pipeTop = pipe.y;
-        const pipeBottom = pipe.y + pipe.height;
+        const pipeLeft = pipe.x + this.PIPE_HORIZONTAL_PADDING;
+        const pipeRight = pipe.x + pipe.width - this.PIPE_HORIZONTAL_PADDING;
+        const pipeTop = pipe.y + (pipe.flipped ? this.PIPE_VERTICAL_PADDING : 0);
+        const pipeBottom = pipe.y + pipe.height - (pipe.flipped ? 0 : this.PIPE_VERTICAL_PADDING);
 
         return (
             birdRight > pipeLeft &&
@@ -219,35 +224,30 @@ class Background {
         const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % 
             this.snappingPlantFrameCount;
         
-        if (frame < 2 || frame > 6 || plant.elapsedTime > this.snappingPlantFrameDuration * 
-            this.snappingPlantFrameCount) {
-            return false;
-        }
+        if (frame < 2 || frame > 4) return false;
 
-        const birdWidth = 34 * 0.8;
-        const birdHeight = 70 * 0.8;
+        const birdLeft = bird.x + this.BIRD_X_OFFSET;
+        const birdRight = birdLeft + this.BIRD_WIDTH;
+        const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        const birdBottom = birdTop + this.BIRD_HEIGHT;
 
-        const birdLeft = bird.x + (34 * 1.2 - birdWidth) / 2;
-        const birdRight = birdLeft + birdWidth;
-        const birdTop = bird.y + (70 * 1.2 - birdHeight) / 2;
-        const birdBottom = birdTop + birdHeight;
-
-        const plantVisualWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
-        const plantVisualHeight = this.snappingPlantFrameHeight * this.snappingPlantScale;
+        const plantScale = this.snappingPlantScale;
+        const collisionWidth = this.snappingPlantFrameWidth * plantScale * 
+            this.PLANT_COLLISION_WIDTH_FACTOR;
+        const collisionHeight = this.snappingPlantFrameHeight * plantScale * 
+            this.PLANT_COLLISION_HEIGHT_FACTOR;
         
-        const plantWidth = plantVisualWidth * 0.6;
-        const plantHeight = plantVisualHeight * 0.6;
-
-        const plantLeft = plant.x + (plantVisualWidth - plantWidth) / 2;
-        const plantRight = plantLeft + plantWidth;
-        const plantTop = plant.y + (plantVisualHeight - plantHeight) / 2;
-        const plantBottom = plantTop + plantHeight;
+        const plantCollisionX = plant.x + 
+            (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
+        const plantCollisionY = plant.type === "top" 
+            ? plant.y + this.snappingPlantTopFrameHeight * plantScale - collisionHeight
+            : plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * 0.8;
 
         return (
-            birdRight > plantLeft &&
-            birdLeft < plantRight &&
-            birdBottom > plantTop &&
-            birdTop < plantBottom
+            birdRight > plantCollisionX &&
+            birdLeft < plantCollisionX + collisionWidth &&
+            birdBottom > plantCollisionY &&
+            birdTop < plantCollisionY + collisionHeight
         );
     }
 
@@ -272,6 +272,16 @@ class Background {
                     pipe.x, pipe.y, pipe.width, pipe.height
                 );
             }
+
+            if (this.SHOW_HITBOXES) {
+                ctx.strokeStyle = "red";
+                ctx.lineWidth = 2;
+                const hbx = pipe.x + this.PIPE_HORIZONTAL_PADDING;
+                const hby = pipe.y + (pipe.flipped ? this.PIPE_VERTICAL_PADDING : 0);
+                const hbw = pipe.width - (2 * this.PIPE_HORIZONTAL_PADDING);
+                const hbh = pipe.height - (pipe.flipped ? this.PIPE_VERTICAL_PADDING : 0);
+                ctx.strokeRect(hbx, hby, hbw, hbh);
+            }
         });
 
         this.snappingPlants.forEach(plant => {
@@ -290,6 +300,24 @@ class Background {
                 this.snappingPlantFrameWidth * this.snappingPlantScale,
                 this.snappingPlantFrameHeight * this.snappingPlantScale
             );
+
+            if (this.SHOW_HITBOXES && frame >= 2 && frame <= 4) {
+                const plantScale = this.snappingPlantScale;
+                const collisionWidth = this.snappingPlantFrameWidth * plantScale * 
+                    this.PLANT_COLLISION_WIDTH_FACTOR;
+                const collisionHeight = this.snappingPlantFrameHeight * plantScale * 
+                    this.PLANT_COLLISION_HEIGHT_FACTOR;
+                
+                const plantCollisionX = plant.x + 
+                    (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
+                const plantCollisionY = plant.type === "top" 
+                    ? plant.y + this.snappingPlantTopFrameHeight * plantScale - collisionHeight
+                    : plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * 0.8;
+
+                ctx.strokeStyle = "red";
+                ctx.lineWidth = 2;
+                ctx.strokeRect(plantCollisionX, plantCollisionY, collisionWidth, collisionHeight);
+            }
         });
 
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
