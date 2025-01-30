@@ -68,7 +68,7 @@ class Background {
     spawnPipePair() {
         if (!this.gameStarted || this.game.gameOver) return;
 
-        const opening = 200;
+        const opening = 150;
         const topPipeHeight = Math.random() * (this.baseY - this.pipeSpacing - opening);
 
         this.pipeArray.push({
