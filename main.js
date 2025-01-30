@@ -9,6 +9,7 @@ ASSET_MANAGER.queueDownload("./Sprites/Pipes/top pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Bird/yellowbird-sprite-sheet.png")
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/SnappingPlant.png"); 
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/snapping plants top.png");
+ASSET_MANAGER.queueDownload("./Sprites/Background/coin.png");
 ASSET_MANAGER.queueDownload("./audio/sfx_wing.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_point.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_die.wav");
@@ -24,8 +25,13 @@ ASSET_MANAGER.downloadAll(() => {
     const bird = new Bird(gameEngine);
     gameEngine.addEntity(bird);
 
+    const coin = new Coin(gameEngine);
+    gameEngine.addEntity(coin);
+
     const background = new Background(gameEngine);
     gameEngine.addEntity(background);
+
+    
 
 
     gameEngine.init(ctx);
