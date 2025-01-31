@@ -25,10 +25,11 @@ class Bird {
 
         this.score = 0;
 
-        // Hitbox parameters
-        this.BIRD_WIDTH = 34 * 0.7;
-        this.BIRD_HEIGHT = 70 * 0.7;
-        this.BIRD_X_OFFSET = 10;
+        // Hitbox parameters (adjust these to change collision box)
+        this.BIRD_WIDTH = 50 * 0.6; // Width of the collision box
+        this.BIRD_HEIGHT = 50 * 0.6; // Height of the collision box
+        this.BIRD_X_OFFSET = 5; // Horizontal offset of the collision box
+        this.BIRD_Y_OFFSET = 5; // Vertical offset of the collision box
     }
 
     reset() {
@@ -127,7 +128,7 @@ class Bird {
 
         // Draw bird hitbox (in red)
         const birdLeft = this.x + this.BIRD_X_OFFSET;
-        const birdTop = this.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        const birdTop = this.y + this.BIRD_Y_OFFSET;
         const birdWidth = this.BIRD_WIDTH;
         const birdHeight = this.BIRD_HEIGHT;
 
