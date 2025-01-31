@@ -78,10 +78,10 @@ class Background {
 
     spawnPipePair() {
         if (!this.gameStarted || this.game.gameOver) return;
-
+    
         const opening = 150;
         const topPipeHeight = Math.random() * (this.baseY - this.pipeSpacing - opening);
-
+    
         const topPipe = {
             x: this.width,
             y: topPipeHeight - this.pipeHeight,
@@ -91,7 +91,7 @@ class Background {
             passed: false
         };
         this.pipeArray.push(topPipe);
-
+    
         const bottomPipe = {
             x: this.width,
             y: topPipeHeight + opening,
@@ -101,36 +101,36 @@ class Background {
             passed: false
         };
         this.pipeArray.push(bottomPipe);
-
-        const numCoinsBetween = 1; // Number of coins to spawn
-        const coinSpacing = this.pipeWidth * 1.5; // Spacing between each coin
-        const rightOffset = 100; // Horizontal offset to shift coins rightward
-
-        for (let i = 0; i < numCoinsBetween; i++) {
-            const coinX = topPipe.x + (i * coinSpacing) + rightOffset; // Spacing coins evenly
-            const coinY = topPipeHeight + opening / 2 + (i % 2 === 0 ? -30 : 30); // Slight vertical variation between coins
-
-            this.coins.push({
-                x: coinX,
-                y: coinY,
-                animator: new Animator(
-                    ASSET_MANAGER.getAsset("./Sprites/Background/coin.png"),
-                    0, 0, 118, 130, 6, 0.1
-                ),
-                collected: false
-            });
-        }
-
+    
+        // More random coin spawning - one coin per pipe area
+        // Random x position in the area between current and next pipe
+        const coinX = topPipe.x + this.pipeWidth + Math.random() * (this.pipeWidth * 2);
+        
+        // Much more random y position - can be anywhere from near top of screen to just above base
+        const maxY = this.baseY - 50; // Keep some distance from the base
+        const minY = 50; // Keep some distance from the top
+        const coinY = minY + Math.random() * (maxY - minY);
+    
+        this.coins.push({
+            x: coinX,
+            y: coinY,
+            animator: new Animator(
+                ASSET_MANAGER.getAsset("./Sprites/Background/coin.png"),
+                0, 0, 118, 130, 6, 0.1
+            ),
+            collected: false
+        });
+    
         if (this.pipePairCount % 2 === 0) {
             const addTopPlant = Math.random() < 0.5;
-
+    
             if (addTopPlant) {
                 const topPlantX = this.width + (this.pipeWidth / 2) -
                     ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
                 const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight *
                     this.snappingPlantScale + 18;
                 const topDelay = Math.random() * 3;
-
+    
                 this.snappingPlants.push({
                     x: topPlantX,
                     y: topPlantY,
@@ -143,7 +143,7 @@ class Background {
                 const bottomPlantY = bottomPipe.y -
                     (this.snappingPlantFrameHeight * this.snappingPlantScale);
                 const bottomDelay = Math.random() * 1;
-
+    
                 this.snappingPlants.push({
                     x: bottomPlantX,
                     y: bottomPlantY,
@@ -152,7 +152,7 @@ class Background {
                 });
             }
         }
-
+    
         this.pipePairCount++;
     }
 
