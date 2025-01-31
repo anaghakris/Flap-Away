@@ -25,8 +25,8 @@ ASSET_MANAGER.downloadAll(() => {
     const bird = new Bird(gameEngine);
     gameEngine.addEntity(bird);
 
-    const coin = new Coin(gameEngine);
-    gameEngine.addEntity(coin);
+    // const coin = new Coin(gameEngine);
+    // gameEngine.addEntity(coin);
 
     const background = new Background(gameEngine);
     gameEngine.addEntity(background);

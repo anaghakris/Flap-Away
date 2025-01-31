@@ -2,6 +2,7 @@ class Background {
     constructor(game) {
         this.game = game;
         this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
+        this.coin = ASSET_MANAGER.getAsset("./Sprites/Background/coin.png");
         this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
@@ -18,6 +19,8 @@ class Background {
         this.pipeHeight = 200;
         this.pipeArray = [];
         this.snappingPlants = [];
+        this.coins = [];
+        this.numCoins = 5; 
         this.pipeSpeed = 5;
         this.pipeSpacing = 200;
         this.pipeInterval = 1500;
@@ -33,6 +36,7 @@ class Background {
         this.pipePairCount = 0;
         
         this.pipeSpawnInterval = null;
+        this.spawnCoins();
         this.setupPipeSpawning();
 
         this.SHOW_HITBOXES = true;
@@ -55,6 +59,7 @@ class Background {
             clearInterval(this.pipeSpawnInterval);
         }
         this.setupPipeSpawning();
+        this.spawnCoins();
     }
 
     startGame() {
@@ -65,6 +70,47 @@ class Background {
             }
         });
     }
+    getRandomPosition(minX, maxX, minY, maxY, obstacles, width, height, maxRetries = 10) {
+        let retries = 0;
+        let x, y;
+
+        while (retries < maxRetries) {
+            x = Math.random() * (maxX - minX - width) + minX;
+            y = Math.random() * (maxY - minY - height) + minY;
+
+            let collides = obstacles.some(obstacle => 
+                x < obstacle.x + obstacle.width && x + width > obstacle.x &&
+                y < obstacle.y + obstacle.height && y + height > obstacle.y
+            );
+
+            if (!collides) {
+                return { x, y };
+            }
+            retries++;
+        }
+        return { x, y }; 
+    }
+
+    spawnCoins() {
+        let minX = 50, maxX = 600, minY = 50, maxY = 400;
+        let obstacles = this.game.obstacles || [];
+        
+        this.coins = []; // Reset the coins array each time you spawn new coins
+    
+        for (let i = 0; i < this.numCoins; i++) {
+            let { x, y } = this.getRandomPosition(minX, maxX, minY, maxY, obstacles, 50, 50);
+            this.coins.push({
+                x,
+                y,
+                animator: new Animator(
+                    ASSET_MANAGER.getAsset("./Sprites/Background/coin.png"),
+                    0, 0, 118, 130, 6, 0.1
+                ),
+                collected: false
+            });
+        }
+    }
+
 
     setupPipeSpawning() {
         this.pipeSpawnInterval = setInterval(() => {
@@ -184,7 +230,27 @@ class Background {
                     break;
                 }
             }
+            this.coins.forEach(coin => {
+                if (!coin.collected && this.checkCoinCollision(bird, coin)) {
+                    coin.collected = true;
+                    bird.score++;  // Increase bird's score
+                    if (this.pointSound) {
+                        this.pointSound.currentTime = 0;
+                        this.pointSound.play();
+                    }
+                }
+            });
         }
+
+        this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
+        this.snappingPlants = this.snappingPlants.filter(plant => {
+            const isOnScreen = plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0;
+            const hasCompletedAnimation = plant.elapsedTime >= 0 &&
+                plant.elapsedTime > this.snappingPlantFrameDuration * this.snappingPlantFrameCount;
+            return isOnScreen && !hasCompletedAnimation;
+        });
+
+        this.coins = this.coins.filter(coin => !coin.collected);
 
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
         this.snappingPlants = this.snappingPlants.filter(plant => {
@@ -250,6 +316,35 @@ class Background {
             birdTop < plantCollisionY + collisionHeight
         );
     }
+    checkCoinCollision(bird, coin) {
+        const birdWidth = 34 * 0.8;
+        const birdHeight = 70 * 0.8;
+    
+        const birdLeft = bird.x + (34 * 1.2 - birdWidth) / 2;
+        const birdRight = birdLeft + birdWidth;
+        const birdTop = bird.y + (70 * 1.2 - birdHeight) / 2;
+        const birdBottom = birdTop + birdHeight;
+    
+        const coinWidth = 50;  // Assuming coin width is 50px
+        const coinHeight = 50; // Assuming coin height is 50px
+    
+        const coinLeft = coin.x;
+        const coinRight = coinLeft + coinWidth;
+        const coinTop = coin.y;
+        const coinBottom = coinTop + coinHeight;
+    
+        return (
+            birdRight > coinLeft &&
+            birdLeft < coinRight &&
+            birdBottom > coinTop &&
+            birdTop < coinBottom
+        );
+    }
+    collectCoin(coinIndex) {
+        if (this.coins[coinIndex]) {
+            this.coins[coinIndex].collected = true;
+        }
+    }
 
     draw(ctx) {
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
@@ -281,6 +376,11 @@ class Background {
                 const hbw = pipe.width - (2 * this.PIPE_HORIZONTAL_PADDING);
                 const hbh = pipe.height - (pipe.flipped ? this.PIPE_VERTICAL_PADDING : 0);
                 ctx.strokeRect(hbx, hby, hbw, hbh);
+            }
+        });
+        this.coins.forEach(coin => {
+            if (!coin.collected) {
+                coin.animator.drawFrame(this.game.clockTick, ctx, coin.x, coin.y, 0.5);
             }
         });
 
