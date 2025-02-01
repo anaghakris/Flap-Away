@@ -29,7 +29,7 @@ class Background {
         this.snappingPlantFrameHeight = 250;
         this.snappingPlantTopFrameHeight = 90;
         this.snappingPlantFrameCount = 6;
-        this.snappingPlantFrameDuration = 0.25;
+        this.snappingPlantFrameDuration = 0.3;
         this.snappingPlantScale = 0.3;
 
         this.gameStarted = false;
@@ -164,10 +164,23 @@ class Background {
             pipe.x -= this.pipeSpeed;
         });
 
+        // this.snappingPlants.forEach(plant => {
+        //     plant.x -= this.pipeSpeed;
+        //     plant.elapsedTime += this.game.clockTick;
+        // });
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
-            plant.elapsedTime += this.game.clockTick;
+            plant.elapsedTime += this.game.clockTick; 
+        
+            const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
+        
+            if (frame === this.snappingPlantFrameCount - 1) {
+                plant.elapsedTime = 0;  
+            }
+        
+            this.snappingPlantFrameDuration = 0.3;
         });
+        
 
         this.coins.forEach(coin => {
             if (!coin.collected) {
