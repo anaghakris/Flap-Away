@@ -38,7 +38,6 @@ class Background {
         this.pipeSpawnInterval = null;
         this.setupPipeSpawning();
 
-        this.SHOW_HITBOXES = true;
         this.BIRD_WIDTH = 34 * 0.7;
         this.BIRD_HEIGHT = 70 * 0.7;
         this.BIRD_X_OFFSET = 10;
@@ -354,16 +353,6 @@ class Background {
                     pipe.x, pipe.y, pipe.width, pipe.height
                 );
             }
-
-            if (this.SHOW_HITBOXES) {
-                ctx.strokeStyle = "red";
-                ctx.lineWidth = 2;
-                const pipeLeft = pipe.x + this.PIPE_HORIZONTAL_PADDING;
-                const pipeTop = pipe.y + (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : 0);
-                const pipeWidth = pipe.width - (2 * this.PIPE_HORIZONTAL_PADDING);
-                const pipeHeight = pipe.height - (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : this.PIPE_VERTICAL_PADDING);
-                ctx.strokeRect(pipeLeft, pipeTop, pipeWidth, pipeHeight);
-            }
         });
 
         this.coins.forEach(coin => {
@@ -388,28 +377,6 @@ class Background {
                 this.snappingPlantFrameWidth * this.snappingPlantScale,
                 this.snappingPlantFrameHeight * this.snappingPlantScale
             );
-
-            if (this.SHOW_HITBOXES && frame >= 2 && frame <= 4) {
-                const plantScale = this.snappingPlantScale;
-                const collisionFactors = this.PLANT_COLLISION_STATES[plant.state];
-                const collisionWidth = this.snappingPlantFrameWidth * plantScale * collisionFactors.widthFactor;
-                const collisionHeight = this.snappingPlantFrameHeight * plantScale * collisionFactors.heightFactor;
-                
-                let plantCollisionX = plant.x + (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
-                let plantCollisionY;
-                
-                if (plant.type === "top") {
-                    plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale - 
-                        (plant.state === "SNAPPING" ? 0 : collisionHeight);
-                } else {
-                    plantCollisionY = plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * 
-                        (plant.state === "SNAPPING" ? 0.9 : 0.8);
-                }
-
-                ctx.strokeStyle = "red";
-                ctx.lineWidth = 2;
-                ctx.strokeRect(plantCollisionX, plantCollisionY, collisionWidth, collisionHeight);
-            }
         });
 
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);

@@ -25,11 +25,10 @@ class Bird {
 
         this.score = 0;
 
-        // Hitbox parameters (adjust these to change collision box)
-        this.BIRD_WIDTH = 50 * 0.6; // Width of the collision box
-        this.BIRD_HEIGHT = 50 * 0.6; // Height of the collision box
-        this.BIRD_X_OFFSET = 5; // Horizontal offset of the collision box
-        this.BIRD_Y_OFFSET = 5; // Vertical offset of the collision box
+        this.BIRD_WIDTH = 50 * 0.6;
+        this.BIRD_HEIGHT = 50 * 0.6;
+        this.BIRD_X_OFFSET = 5;
+        this.BIRD_Y_OFFSET = 5;
     }
 
     reset() {
@@ -114,7 +113,6 @@ class Bird {
         ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2));
         const scale = 0.6;
 
-        // Draw the bird sprite
         if (this.isFlapping) {
             this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
         } else {
@@ -126,19 +124,8 @@ class Bird {
             );
         }
 
-        // Draw bird hitbox (in red)
-        const birdLeft = this.x + this.BIRD_X_OFFSET;
-        const birdTop = this.y + this.BIRD_Y_OFFSET;
-        const birdWidth = this.BIRD_WIDTH;
-        const birdHeight = this.BIRD_HEIGHT;
-
-        ctx.strokeStyle = "red"; // Set hitbox color to red
-        ctx.lineWidth = 2; // Set hitbox line thickness
-        ctx.strokeRect(birdLeft, birdTop, birdWidth, birdHeight); // Draw the hitbox
-
         ctx.restore();
 
-        // Draw the score
         ctx.font = "30px Arial";
         ctx.fillStyle = "white";
         ctx.strokeStyle = "black";
