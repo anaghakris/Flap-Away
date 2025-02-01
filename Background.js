@@ -29,7 +29,7 @@ class Background {
         this.snappingPlantFrameHeight = 250;
         this.snappingPlantTopFrameHeight = 90;
         this.snappingPlantFrameCount = 6;
-        this.snappingPlantFrameDuration = 0.3;
+        this.snappingPlantFrameDuration = 0.25;
         this.snappingPlantScale = 0.3;
 
         this.gameStarted = false;
@@ -130,7 +130,7 @@ class Background {
             if (addTopPlant) {
                 const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
                 const topPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
-                const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale;
+                const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 20;
                 
                 this.snappingPlants.push({
                     x: topPlantX,
