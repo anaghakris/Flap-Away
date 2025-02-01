@@ -5,6 +5,7 @@ class Background {
         this.coin = ASSET_MANAGER.getAsset("./Sprites/Background/coin.png");
         this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
+        this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
         this.pointSound = ASSET_MANAGER.getAsset("./audio/sfx_point.wav");
@@ -43,13 +44,17 @@ class Background {
         this.BIRD_X_OFFSET = 10;
         this.PIPE_HORIZONTAL_PADDING = 8;
         this.PIPE_VERTICAL_PADDING = 10;
-        this.PLANT_COLLISION_WIDTH_FACTOR = 0.5;
-        this.PLANT_COLLISION_HEIGHT_FACTOR = 0.4;
+
+        this.PLANT_COLLISION_STATES = {
+            IDLE: { widthFactor: 0.5, heightFactor: 0.4 },
+            SNAPPING: { widthFactor: 0.6, heightFactor: 0.6 }
+        };
     }
 
     reset() {
         this.pipeArray = [];
         this.snappingPlants = [];
+        this.coins = [];
         this.gameStarted = false;
         this.pipePairCount = 0;
         
@@ -80,35 +85,33 @@ class Background {
         if (!this.gameStarted || this.game.gameOver) return;
     
         const opening = 150;
-        const topPipeHeight = Math.random() * (this.baseY - this.pipeSpacing - opening);
+        const minTopPipeHeight = 50;
+        const maxTopPipeHeight = this.baseY - opening - 100;
+        const topPipeHeight = minTopPipeHeight + Math.random() * (maxTopPipeHeight - minTopPipeHeight);
     
         const topPipe = {
             x: this.width,
-            y: topPipeHeight - this.pipeHeight,
+            y: 0,
             width: this.pipeWidth,
-            height: this.pipeHeight,
-            flipped: true,
+            height: topPipeHeight,
+            type: 'top',
             passed: false
         };
-        this.pipeArray.push(topPipe);
-    
+        
         const bottomPipe = {
             x: this.width,
             y: topPipeHeight + opening,
             width: this.pipeWidth,
             height: this.baseY - (topPipeHeight + opening),
-            flipped: false,
+            type: 'bottom',
             passed: false
         };
-        this.pipeArray.push(bottomPipe);
-    
-        // More random coin spawning - one coin per pipe area
-        // Random x position in the area between current and next pipe
-        const coinX = topPipe.x + this.pipeWidth + Math.random() * (this.pipeWidth * 2);
         
-        // Much more random y position - can be anywhere from near top of screen to just above base
-        const maxY = this.baseY - 50; // Keep some distance from the base
-        const minY = 50; // Keep some distance from the top
+        this.pipeArray.push(topPipe, bottomPipe);
+    
+        const coinX = topPipe.x + this.pipeWidth + Math.random() * (this.pipeWidth * 2);
+        const maxY = this.baseY - 50;
+        const minY = 50;
         const coinY = minY + Math.random() * (maxY - minY);
     
         this.coins.push({
@@ -125,30 +128,28 @@ class Background {
             const addTopPlant = Math.random() < 0.5;
     
             if (addTopPlant) {
-                const topPlantX = this.width + (this.pipeWidth / 2) -
-                    ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
-                const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight *
-                    this.snappingPlantScale + 18;
-                const topDelay = Math.random() * 3;
-    
+                const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
+                const topPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
+                const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale;
+                
                 this.snappingPlants.push({
                     x: topPlantX,
                     y: topPlantY,
-                    elapsedTime: -topDelay,
-                    type: "top"
+                    elapsedTime: 0,
+                    type: "top",
+                    state: "IDLE"
                 });
             } else {
-                const bottomPlantX = bottomPipe.x + (this.pipeWidth / 2) -
-                    ((this.snappingPlantFrameWidth * this.snappingPlantScale) / 2);
-                const bottomPlantY = bottomPipe.y -
-                    (this.snappingPlantFrameHeight * this.snappingPlantScale);
-                const bottomDelay = Math.random() * 1;
-    
+                const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
+                const bottomPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
+                const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
+                
                 this.snappingPlants.push({
                     x: bottomPlantX,
                     y: bottomPlantY,
-                    elapsedTime: -bottomDelay,
-                    type: "bottom"
+                    elapsedTime: 0,
+                    type: "bottom",
+                    state: "IDLE"
                 });
             }
         }
@@ -168,7 +169,6 @@ class Background {
             plant.elapsedTime += this.game.clockTick;
         });
 
-        // Update coin positions
         this.coins.forEach(coin => {
             if (!coin.collected) {
                 coin.x -= this.pipeSpeed;
@@ -178,7 +178,7 @@ class Background {
         const bird = this.getBird();
         if (bird) {
             this.pipeArray.forEach(pipe => {
-                if (!pipe.passed && bird.x > pipe.x + pipe.width && pipe.flipped) {
+                if (!pipe.passed && bird.x > pipe.x + pipe.width && pipe.type === 'top') {
                     pipe.passed = true;
                     bird.score++;
                     if (this.pointSound) {
@@ -189,7 +189,7 @@ class Background {
             });
 
             for (const pipe of this.pipeArray) {
-                if (this.checkCollision(bird, pipe)) {
+                if (this.checkPipeCollision(bird, pipe)) {
                     if (this.hitSound) {
                         this.hitSound.currentTime = 0;
                         this.hitSound.play();
@@ -201,7 +201,7 @@ class Background {
                 }
             }
 
-            for (const plant of this.snappingPlants.filter(plant => plant.elapsedTime >= 0)) {
+            for (const plant of this.snappingPlants) {
                 if (this.checkPlantCollision(bird, plant)) {
                     if (this.hitSound) {
                         this.hitSound.currentTime = 0;
@@ -214,7 +214,6 @@ class Background {
                 }
             }
 
-            // Check coin collisions
             this.coins.forEach(coin => {
                 if (!coin.collected && this.checkCoinCollision(bird, coin)) {
                     coin.collected = true;
@@ -229,16 +228,14 @@ class Background {
                 plant.elapsedTime > this.snappingPlantFrameDuration * this.snappingPlantFrameCount;
             return isOnScreen && !hasCompletedAnimation;
         });
-        this.coins = this.coins.filter(coin => 
-            !coin.collected && coin.x + 50 > 0 
-        );
+        this.coins = this.coins.filter(coin => !coin.collected && coin.x + 50 > 0);
     }
 
     getBird() {
         return this.game.entities.find(entity => entity instanceof Bird) || null;
     }
 
-    checkCollision(bird, pipe) {
+    checkPipeCollision(bird, pipe) {
         const birdLeft = bird.x + this.BIRD_X_OFFSET;
         const birdRight = birdLeft + this.BIRD_WIDTH;
         const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
@@ -246,8 +243,8 @@ class Background {
 
         const pipeLeft = pipe.x + this.PIPE_HORIZONTAL_PADDING;
         const pipeRight = pipe.x + pipe.width - this.PIPE_HORIZONTAL_PADDING;
-        const pipeTop = pipe.y + (pipe.flipped ? this.PIPE_VERTICAL_PADDING : 0);
-        const pipeBottom = pipe.y + pipe.height - (pipe.flipped ? 0 : this.PIPE_VERTICAL_PADDING);
+        const pipeTop = pipe.y + (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : 0);
+        const pipeBottom = pipe.y + pipe.height - (pipe.type === 'top' ? 0 : this.PIPE_VERTICAL_PADDING);
 
         return (
             birdRight > pipeLeft &&
@@ -263,24 +260,32 @@ class Background {
         const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % 
             this.snappingPlantFrameCount;
         
-        if (frame < 2 || frame > 4) return false;
-
+        plant.state = (frame >= 2 && frame <= 4) ? "SNAPPING" : "IDLE";
+        
+        const collisionFactors = this.PLANT_COLLISION_STATES[plant.state];
+        
         const birdLeft = bird.x + this.BIRD_X_OFFSET;
         const birdRight = birdLeft + this.BIRD_WIDTH;
         const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
         const birdBottom = birdTop + this.BIRD_HEIGHT;
 
         const plantScale = this.snappingPlantScale;
-        const collisionWidth = this.snappingPlantFrameWidth * plantScale * 
-            this.PLANT_COLLISION_WIDTH_FACTOR;
-        const collisionHeight = this.snappingPlantFrameHeight * plantScale * 
-            this.PLANT_COLLISION_HEIGHT_FACTOR;
+        const collisionWidth = this.snappingPlantFrameWidth * plantScale * collisionFactors.widthFactor;
+        const collisionHeight = this.snappingPlantFrameHeight * plantScale * collisionFactors.heightFactor;
         
-        const plantCollisionX = plant.x + 
-            (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
-        const plantCollisionY = plant.type === "top" 
-            ? plant.y + this.snappingPlantTopFrameHeight * plantScale - collisionHeight
-            : plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * 0.8;
+        let plantCollisionX = plant.x + (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
+        let plantCollisionY;
+        
+        if (plant.type === "top") {
+            if (plant.state === "SNAPPING") {
+                plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale;
+            } else {
+                plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale - collisionHeight;
+            }
+        } else {
+            plantCollisionY = plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * 
+                (plant.state === "SNAPPING" ? 0.9 : 0.8);
+        }
 
         return (
             birdRight > plantCollisionX &&
@@ -289,6 +294,7 @@ class Background {
             birdTop < plantCollisionY + collisionHeight
         );
     }
+
     checkCoinCollision(bird, coin) {
         const birdWidth = 34 * 0.8;
         const birdHeight = 70 * 0.8;
@@ -298,8 +304,8 @@ class Background {
         const birdTop = bird.y + (70 * 1.2 - birdHeight) / 2;
         const birdBottom = birdTop + birdHeight;
     
-        const coinWidth = 50;  
-        const coinHeight = 50; 
+        const coinWidth = 50;
+        const coinHeight = 50;
     
         const coinLeft = coin.x;
         const coinRight = coinLeft + coinWidth;
@@ -318,14 +324,14 @@ class Background {
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
 
         this.pipeArray.forEach(pipe => {
-            if (pipe.flipped) {
+            if (pipe.type === 'top') {
                 ctx.save();
-                ctx.translate(pipe.x + pipe.width / 2, pipe.y + pipe.height / 2);
-                ctx.scale(1, -1);
+                ctx.translate(pipe.x + pipe.width / 2, pipe.y + pipe.height);
+                ctx.rotate(Math.PI);
                 ctx.drawImage(
-                    this.pipeSprite,
+                    this.topPipeSprite,
                     0, 0, 55, 200,
-                    -pipe.width / 2, -pipe.height / 2, pipe.width, pipe.height
+                    -pipe.width / 2, 0, pipe.width, pipe.height
                 );
                 ctx.restore();
             } else {
@@ -339,13 +345,14 @@ class Background {
             if (this.SHOW_HITBOXES) {
                 ctx.strokeStyle = "red";
                 ctx.lineWidth = 2;
-                const hbx = pipe.x + this.PIPE_HORIZONTAL_PADDING;
-                const hby = pipe.y + (pipe.flipped ? this.PIPE_VERTICAL_PADDING : 0);
-                const hbw = pipe.width - (2 * this.PIPE_HORIZONTAL_PADDING);
-                const hbh = pipe.height - (pipe.flipped ? this.PIPE_VERTICAL_PADDING : 0);
-                ctx.strokeRect(hbx, hby, hbw, hbh);
+                const pipeLeft = pipe.x + this.PIPE_HORIZONTAL_PADDING;
+                const pipeTop = pipe.y + (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : 0);
+                const pipeWidth = pipe.width - (2 * this.PIPE_HORIZONTAL_PADDING);
+                const pipeHeight = pipe.height - (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : this.PIPE_VERTICAL_PADDING);
+                ctx.strokeRect(pipeLeft, pipeTop, pipeWidth, pipeHeight);
             }
         });
+
         this.coins.forEach(coin => {
             if (!coin.collected) {
                 coin.animator.drawFrame(this.game.clockTick, ctx, coin.x, coin.y, 0.5);
@@ -355,7 +362,7 @@ class Background {
         this.snappingPlants.forEach(plant => {
             if (plant.elapsedTime < 0) return;
 
-            const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) %
+            const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % 
                 this.snappingPlantFrameCount;
             const sprite = plant.type === "bottom" ?
                 this.snappingPlantSprite : this.snappingPlantTop;
@@ -371,16 +378,20 @@ class Background {
 
             if (this.SHOW_HITBOXES && frame >= 2 && frame <= 4) {
                 const plantScale = this.snappingPlantScale;
-                const collisionWidth = this.snappingPlantFrameWidth * plantScale * 
-                    this.PLANT_COLLISION_WIDTH_FACTOR;
-                const collisionHeight = this.snappingPlantFrameHeight * plantScale * 
-                    this.PLANT_COLLISION_HEIGHT_FACTOR;
+                const collisionFactors = this.PLANT_COLLISION_STATES[plant.state];
+                const collisionWidth = this.snappingPlantFrameWidth * plantScale * collisionFactors.widthFactor;
+                const collisionHeight = this.snappingPlantFrameHeight * plantScale * collisionFactors.heightFactor;
                 
-                const plantCollisionX = plant.x + 
-                    (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
-                const plantCollisionY = plant.type === "top" 
-                    ? plant.y + this.snappingPlantTopFrameHeight * plantScale - collisionHeight
-                    : plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * 0.8;
+                let plantCollisionX = plant.x + (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
+                let plantCollisionY;
+                
+                if (plant.type === "top") {
+                    plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale - 
+                        (plant.state === "SNAPPING" ? 0 : collisionHeight);
+                } else {
+                    plantCollisionY = plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * 
+                        (plant.state === "SNAPPING" ? 0.9 : 0.8);
+                }
 
                 ctx.strokeStyle = "red";
                 ctx.lineWidth = 2;
