@@ -10,6 +10,7 @@ class Background {
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
         this.pointSound = ASSET_MANAGER.getAsset("./audio/sfx_point.wav");
         this.hitSound = ASSET_MANAGER.getAsset("./audio/sfx_hit.wav");
+        this.coinSound = ASSET_MANAGER.getAsset("./audio/coin.wav");
 
         this.width = 800;
         this.height = 600;
@@ -111,12 +112,14 @@ class Background {
 
         this.pipeArray.push(topPipe, bottomPipe);
 
-        const coinX = topPipe.x + this.pipeWidth + Math.random() * (this.pipeWidth * 2);
+        const minDistanceFromPipe = 100;
+        const coinX = topPipe.x + this.pipeWidth + minDistanceFromPipe + Math.random() * (this.pipeWidth);
+
         const maxY = this.baseY - 50;
         const minY = 50;
         const coinY = minY + Math.random() * (maxY - minY);
 
-        this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed));
+        this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed, this.coinSound));
 
         if (this.pipePairCount % 2 === 0) {
             const addTopPlant = Math.random() < 0.5;
@@ -183,6 +186,7 @@ class Background {
                     bird.score++;
                     if (this.pointSound) {
                         this.pointSound.currentTime = 0;
+                        this.pointSound.playbackRate = 2.0;
                         this.pointSound.play();
                     }
                 }

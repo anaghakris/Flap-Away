@@ -14,6 +14,8 @@ ASSET_MANAGER.queueDownload("./audio/sfx_wing.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_point.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_die.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_hit.wav");
+ASSET_MANAGER.queueDownload("./audio/coin.wav");
+
 
 ASSET_MANAGER.downloadAll(() => {
     const canvas = document.getElementById("gameWorld");
