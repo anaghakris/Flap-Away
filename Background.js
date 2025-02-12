@@ -458,7 +458,7 @@ class Background {
 
             ctx.font = '16px "Press Start 2P", monospace'; 
             ctx.fillStyle = colors.text;
-            ctx.fillText('Return to Menu', returnBtnX + returnBtnWidth / 2, returnBtnY + returnBtnHeight / 2 + 8);
+            ctx.fillText('RETURN TO MENU', returnBtnX + returnBtnWidth / 2, returnBtnY + returnBtnHeight / 2 + 8);
 
         } else if (!this.gameStarted) {
             ctx.font = "24px Arial";
