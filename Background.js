@@ -34,7 +34,7 @@ class Background {
 
         this.gameStarted = false;
         this.pipePairCount = 0;
-        
+
         this.pipeSpawnInterval = null;
         this.setupPipeSpawning();
 
@@ -48,6 +48,8 @@ class Background {
             IDLE: { widthFactor: 0.5, heightFactor: 0.4 },
             SNAPPING: { widthFactor: 0.6, heightFactor: 0.6 }
         };
+
+        this.coinProgress = new CoinProgress(game, this.width);
     }
 
     reset() {
@@ -56,11 +58,12 @@ class Background {
         this.coins = [];
         this.gameStarted = false;
         this.pipePairCount = 0;
-        
+
         if (this.pipeSpawnInterval) {
             clearInterval(this.pipeSpawnInterval);
         }
         this.setupPipeSpawning();
+        this.coinProgress.reset();
     }
 
     startGame() {
@@ -82,12 +85,12 @@ class Background {
 
     spawnPipePair() {
         if (!this.gameStarted || this.game.gameOver) return;
-    
+
         const opening = 150;
         const minTopPipeHeight = 50;
         const maxTopPipeHeight = this.baseY - opening - 100;
         const topPipeHeight = minTopPipeHeight + Math.random() * (maxTopPipeHeight - minTopPipeHeight);
-    
+
         const topPipe = {
             x: this.width,
             y: 0,
@@ -96,7 +99,7 @@ class Background {
             type: 'top',
             passed: false
         };
-        
+
         const bottomPipe = {
             x: this.width,
             y: topPipeHeight + opening,
@@ -105,32 +108,24 @@ class Background {
             type: 'bottom',
             passed: false
         };
-        
+
         this.pipeArray.push(topPipe, bottomPipe);
-    
+
         const coinX = topPipe.x + this.pipeWidth + Math.random() * (this.pipeWidth * 2);
         const maxY = this.baseY - 50;
         const minY = 50;
         const coinY = minY + Math.random() * (maxY - minY);
-    
-        this.coins.push({
-            x: coinX,
-            y: coinY,
-            animator: new Animator(
-                ASSET_MANAGER.getAsset("./Sprites/Background/coin.png"),
-                0, 0, 118, 130, 6, 0.1
-            ),
-            collected: false
-        });
-    
+
+        this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed));
+
         if (this.pipePairCount % 2 === 0) {
             const addTopPlant = Math.random() < 0.5;
-    
+
             if (addTopPlant) {
                 const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
                 const topPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
                 const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 20;
-                
+
                 this.snappingPlants.push({
                     x: topPlantX,
                     y: topPlantY,
@@ -142,7 +137,7 @@ class Background {
                 const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
                 const bottomPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
                 const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
-                
+
                 this.snappingPlants.push({
                     x: bottomPlantX,
                     y: bottomPlantY,
@@ -152,7 +147,7 @@ class Background {
                 });
             }
         }
-    
+
         this.pipePairCount++;
     }
 
@@ -163,28 +158,21 @@ class Background {
             pipe.x -= this.pipeSpeed;
         });
 
-        // this.snappingPlants.forEach(plant => {
-        //     plant.x -= this.pipeSpeed;
-        //     plant.elapsedTime += this.game.clockTick;
-        // });
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
-            plant.elapsedTime += this.game.clockTick; 
-        
+            plant.elapsedTime += this.game.clockTick;
+
             const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
-        
+
             if (frame === this.snappingPlantFrameCount - 1) {
-                plant.elapsedTime = 0;  
+                plant.elapsedTime = 0;
             }
-        
+
             this.snappingPlantFrameDuration = 0.3;
         });
-        
 
         this.coins.forEach(coin => {
-            if (!coin.collected) {
-                coin.x -= this.pipeSpeed;
-            }
+            coin.update();
         });
 
         const bird = this.getBird();
@@ -209,6 +197,11 @@ class Background {
                     this.game.gameOver = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
+                    const currentScore = bird.score;
+                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                    if (currentScore > bestScore) {
+                        localStorage.setItem('bestScore', currentScore.toString());
+                    }
                     break;
                 }
             }
@@ -222,13 +215,19 @@ class Background {
                     this.game.gameOver = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
+                    const currentScore = bird.score;
+                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                    if (currentScore > bestScore) {
+                        localStorage.setItem('bestScore', currentScore.toString());
+                    }
                     break;
                 }
             }
 
             this.coins.forEach(coin => {
-                if (!coin.collected && this.checkCoinCollision(bird, coin)) {
+                if (!coin.collected && coin.checkCollision(bird)) {
                     coin.collected = true;
+                    this.coinProgress.collectCoin();
                 }
             });
         }
@@ -268,14 +267,14 @@ class Background {
 
     checkPlantCollision(bird, plant) {
         if (plant.elapsedTime < 0) return false;
-        
+
         const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % 
             this.snappingPlantFrameCount;
-        
+
         plant.state = (frame >= 2 && frame <= 4) ? "SNAPPING" : "IDLE";
-        
+
         const collisionFactors = this.PLANT_COLLISION_STATES[plant.state];
-        
+
         const birdLeft = bird.x + this.BIRD_X_OFFSET;
         const birdRight = birdLeft + this.BIRD_WIDTH;
         const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
@@ -284,10 +283,10 @@ class Background {
         const plantScale = this.snappingPlantScale;
         const collisionWidth = this.snappingPlantFrameWidth * plantScale * collisionFactors.widthFactor;
         const collisionHeight = this.snappingPlantFrameHeight * plantScale * collisionFactors.heightFactor;
-        
+
         let plantCollisionX = plant.x + (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
         let plantCollisionY;
-        
+
         if (plant.type === "top") {
             if (plant.state === "SNAPPING") {
                 plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale;
@@ -307,31 +306,7 @@ class Background {
         );
     }
 
-    checkCoinCollision(bird, coin) {
-        const birdWidth = 34 * 0.8;
-        const birdHeight = 70 * 0.8;
-    
-        const birdLeft = bird.x + (34 * 1.2 - birdWidth) / 2;
-        const birdRight = birdLeft + birdWidth;
-        const birdTop = bird.y + (70 * 1.2 - birdHeight) / 2;
-        const birdBottom = birdTop + birdHeight;
-    
-        const coinWidth = 50;
-        const coinHeight = 50;
-    
-        const coinLeft = coin.x;
-        const coinRight = coinLeft + coinWidth;
-        const coinTop = coin.y;
-        const coinBottom = coinTop + coinHeight;
-    
-        return (
-            birdRight > coinLeft &&
-            birdLeft < coinRight &&
-            birdBottom > coinTop &&
-            birdTop < coinBottom
-        );
-    }
-
+   
     draw(ctx) {
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
 
@@ -356,9 +331,7 @@ class Background {
         });
 
         this.coins.forEach(coin => {
-            if (!coin.collected) {
-                coin.animator.drawFrame(this.game.clockTick, ctx, coin.x, coin.y, 0.5);
-            }
+            coin.draw(ctx);
         });
 
         this.snappingPlants.forEach(plant => {
@@ -381,17 +354,83 @@ class Background {
 
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
 
+        this.coinProgress.draw(ctx);
+
         if (this.game.gameOver) {
-            ctx.font = "48px Arial";
-            ctx.fillStyle = "white";
-            ctx.strokeStyle = "black";
-            ctx.lineWidth = 3;
-            ctx.textAlign = "center";
-            ctx.strokeText("Game Over", this.width / 2, this.height / 2);
-            ctx.fillText("Game Over", this.width / 2, this.height / 2);
-            ctx.font = "24px Arial";
-            ctx.strokeText("Press Space to Restart", this.width / 2, this.height / 2 + 40);
-            ctx.fillText("Press Space to Restart", this.width / 2, this.height / 2 + 40);
+            const colors = this.coinProgress.colors;
+
+            const panelWidth = 180; 
+            const panelHeight = 160; 
+            const panelX = (this.width - panelWidth) / 2;
+            const panelY = (this.height - panelHeight) / 2 - 50;
+
+            ctx.fillStyle = colors.background;
+            ctx.strokeStyle = colors.border;
+            ctx.lineWidth = 4;
+            
+            ctx.beginPath();
+            ctx.moveTo(panelX + 10, panelY);
+            ctx.lineTo(panelX + panelWidth - 10, panelY);
+            ctx.quadraticCurveTo(panelX + panelWidth, panelY, panelX + panelWidth, panelY + 10);
+            ctx.lineTo(panelX + panelWidth, panelY + panelHeight - 10);
+            ctx.quadraticCurveTo(panelX + panelWidth, panelY + panelHeight, panelX + panelWidth - 10, panelY + panelHeight);
+            ctx.lineTo(panelX + 10, panelY + panelHeight);
+            ctx.quadraticCurveTo(panelX, panelY + panelHeight, panelX, panelY + panelHeight - 10);
+            ctx.lineTo(panelX, panelY + 10);
+            ctx.quadraticCurveTo(panelX, panelY, panelX + 10, panelY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.font = '18px "Press Start 2P", monospace'; 
+            ctx.fillStyle = colors.title.main;
+            ctx.textAlign = 'center';
+            ctx.fillText('GAME OVER', panelX + panelWidth / 2, panelY + 30);
+
+            ctx.font = '16px "Press Start 2P", monospace'; 
+            ctx.fillStyle = colors.title.main;
+            ctx.fillText('SCORE', panelX + panelWidth / 2, panelY + 60);
+
+            ctx.fillStyle = colors.text;
+            ctx.font = '20px "Press Start 2P", monospace'; 
+            ctx.fillText(this.getBird()?.score.toString() || '0', 
+                panelX + panelWidth / 2, panelY + 90);
+
+            ctx.font = '16px "Press Start 2P", monospace'; 
+            ctx.fillStyle = colors.title.main;
+            ctx.fillText('BEST', panelX + panelWidth / 2, panelY + 120);
+
+            ctx.fillStyle = colors.text;
+            ctx.font = '20px "Press Start 2P", monospace'; 
+            const bestScore = localStorage.getItem('bestScore') || '0';
+            ctx.fillText(bestScore, panelX + panelWidth / 2, panelY + 150);
+
+            const btnWidth = 120; 
+            const btnHeight = 40; 
+            const btnX = (this.width - btnWidth) / 2;
+            const btnY = panelY + panelHeight + 10; 
+
+            ctx.fillStyle = colors.fill.start;
+            ctx.strokeStyle = colors.border;
+            ctx.lineWidth = 4;
+            
+            ctx.beginPath();
+            ctx.moveTo(btnX + 10, btnY);
+            ctx.lineTo(btnX + btnWidth - 10, btnY);
+            ctx.quadraticCurveTo(btnX + btnWidth, btnY, btnX + btnWidth, btnY + 10);
+            ctx.lineTo(btnX + btnWidth, btnY + btnHeight - 10);
+            ctx.quadraticCurveTo(btnX + btnWidth, btnY + btnHeight, btnX + btnWidth - 10, btnY + btnHeight);
+            ctx.lineTo(btnX + 10, btnY + btnHeight);
+            ctx.quadraticCurveTo(btnX, btnY + btnHeight, btnX, btnY + btnHeight - 10);
+            ctx.lineTo(btnX, btnY + 10);
+            ctx.quadraticCurveTo(btnX, btnY, btnX + 10, btnY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.font = '16px "Press Start 2P", monospace'; 
+            ctx.fillStyle = colors.text;
+            ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
         } else if (!this.gameStarted) {
             ctx.font = "24px Arial";
             ctx.fillStyle = "white";
