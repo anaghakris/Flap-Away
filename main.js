@@ -15,6 +15,8 @@ ASSET_MANAGER.queueDownload("./audio/sfx_point.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_die.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_hit.wav");
 ASSET_MANAGER.queueDownload("./audio/coin.wav");
+ASSET_MANAGER.queueDownload("./audio/piranhaPlant.wav");
+
 
 
 ASSET_MANAGER.downloadAll(() => {
@@ -26,12 +28,13 @@ ASSET_MANAGER.downloadAll(() => {
     gameEngine.addEntity(startPage);
 
     gameEngine.init(ctx);
+    gameEngine.isTransitioning = false; 
 
     canvas.tabIndex = 1;
     canvas.focus();
 
     canvas.addEventListener("click", (e) => {
-        if (gameEngine.gameOver) {
+        if (gameEngine.gameOver && !gameEngine.isTransitioning) {
             const rect = canvas.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const clickY = e.clientY - rect.top;
@@ -42,7 +45,6 @@ ASSET_MANAGER.downloadAll(() => {
             const btnX = (canvas.width - btnWidth) / 2;
             const btnY = panelY + 160 + 10;
 
-            // Return to menu button dimensions (new button)
             const menuBtnWidth = 240;
             const menuBtnHeight = 40;
             const menuBtnX = (canvas.width - menuBtnWidth) / 2;
@@ -51,18 +53,22 @@ ASSET_MANAGER.downloadAll(() => {
             if (clickX >= btnX && clickX <= btnX + btnWidth &&
                 clickY >= btnY && clickY <= btnY + btnHeight) {
                 
+                gameEngine.isTransitioning = true; 
                 gameEngine.gameOver = false;  
                 gameEngine.entities.forEach(entity => {
                     if (entity.reset) {
                         entity.reset();  
                     }
                 });
+                setTimeout(() => {
+                    gameEngine.isTransitioning = false;
+                }, 200);
             } 
 
-            // Return menu
             if (clickX >= menuBtnX && clickX <= menuBtnX + menuBtnWidth &&
                 clickY >= menuBtnY && clickY <= menuBtnY + menuBtnHeight) {
                 
+                gameEngine.isTransitioning = true;
                 gameEngine.gameOver = false;  
                 gameEngine.entities.forEach(entity => {
                     if (entity.reset) {
@@ -71,7 +77,10 @@ ASSET_MANAGER.downloadAll(() => {
                 });
                 gameEngine.entities = []; 
                 const startPage = new StartPage(gameEngine);  
-                gameEngine.addEntity(startPage);  
+                gameEngine.addEntity(startPage);
+                setTimeout(() => {
+                    gameEngine.isTransitioning = false;
+                }, 200);
             }
         }
     });

@@ -8,9 +8,21 @@ class Background {
         this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
+
         this.pointSound = ASSET_MANAGER.getAsset("./audio/sfx_point.wav");
+        this.pointSound.volume = 0.3; 
+        
         this.hitSound = ASSET_MANAGER.getAsset("./audio/sfx_hit.wav");
+        this.hitSound.volume = 0.6;    
+        
         this.coinSound = ASSET_MANAGER.getAsset("./audio/coin.wav");
+        this.coinSound.volume = 0.4;  
+        
+        this.plantChompSound = ASSET_MANAGER.getAsset("./audio/piranhaPlant.wav");
+        this.plantChompSound.volume = 0.35; 
+        
+        this.lastSoundTime = 0;       
+        this.MIN_SOUND_INTERVAL = 150; 
 
         this.width = 800;
         this.height = 600;
@@ -24,7 +36,7 @@ class Background {
         this.coins = [];
         this.pipeSpeed = 5;
         this.pipeSpacing = 200;
-        this.pipeInterval = 1500;
+        this.pipeInterval = 2000;
 
         this.snappingPlantFrameWidth = 158;
         this.snappingPlantFrameHeight = 250;
@@ -35,7 +47,6 @@ class Background {
 
         this.gameStarted = false;
         this.pipePairCount = 0;
-
         this.pipeSpawnInterval = null;
         this.setupPipeSpawning();
 
@@ -51,6 +62,15 @@ class Background {
         };
 
         this.coinProgress = new CoinProgress(game, this.width);
+    }
+
+    playSound(sound) {
+        const currentTime = Date.now();
+        if (currentTime - this.lastSoundTime >= this.MIN_SOUND_INTERVAL) {
+            sound.currentTime = 0;
+            sound.play();
+            this.lastSoundTime = currentTime;
+        }
     }
 
     reset() {
@@ -114,7 +134,6 @@ class Background {
 
         const minDistanceFromPipe = 100;
         const coinX = topPipe.x + this.pipeWidth + minDistanceFromPipe + Math.random() * (this.pipeWidth);
-
         const maxY = this.baseY - 50;
         const minY = 50;
         const coinY = minY + Math.random() * (maxY - minY);
@@ -134,7 +153,8 @@ class Background {
                     y: topPlantY,
                     elapsedTime: 0,
                     type: "top",
-                    state: "IDLE"
+                    state: "IDLE",
+                    lastFrame: -1
                 });
             } else {
                 const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
@@ -146,7 +166,8 @@ class Background {
                     y: bottomPlantY,
                     elapsedTime: 0,
                     type: "bottom",
-                    state: "IDLE"
+                    state: "IDLE",
+                    lastFrame: -1
                 });
             }
         }
@@ -167,6 +188,11 @@ class Background {
 
             const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
 
+            if (frame === 3 && plant.lastFrame !== 3) {
+                this.playSound(this.plantChompSound);
+            }
+            plant.lastFrame = frame;
+
             if (frame === this.snappingPlantFrameCount - 1) {
                 plant.elapsedTime = 0;
             }
@@ -184,20 +210,13 @@ class Background {
                 if (!pipe.passed && bird.x > pipe.x + pipe.width && pipe.type === 'top') {
                     pipe.passed = true;
                     bird.score++;
-                    if (this.pointSound) {
-                        this.pointSound.currentTime = 0;
-                        this.pointSound.playbackRate = 2.0;
-                        this.pointSound.play();
-                    }
+                    this.playSound(this.pointSound);
                 }
             });
 
             for (const pipe of this.pipeArray) {
                 if (this.checkPipeCollision(bird, pipe)) {
-                    if (this.hitSound) {
-                        this.hitSound.currentTime = 0;
-                        this.hitSound.play();
-                    }
+                    this.playSound(this.hitSound);
                     this.game.gameOver = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
@@ -212,10 +231,7 @@ class Background {
 
             for (const plant of this.snappingPlants) {
                 if (this.checkPlantCollision(bird, plant)) {
-                    if (this.hitSound) {
-                        this.hitSound.currentTime = 0;
-                        this.hitSound.play();
-                    }
+                    this.playSound(this.hitSound);
                     this.game.gameOver = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
@@ -236,6 +252,7 @@ class Background {
             });
         }
 
+        // Clean up off-screen elements
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
         this.snappingPlants = this.snappingPlants.filter(plant => {
             const isOnScreen = plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0;

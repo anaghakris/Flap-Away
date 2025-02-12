@@ -6,6 +6,9 @@ class Coin {
         this.pipeSpeed = pipeSpeed;  
         this.collected = false;
         this.coinSound = coinSound;
+        if (this.coinSound) {
+            this.coinSound.volume = 0.4; 
+        }
         this.animator = new Animator(
             ASSET_MANAGER.getAsset("./Sprites/Background/coin.png"),
             0, 0, 118, 130, 6, 0.1
