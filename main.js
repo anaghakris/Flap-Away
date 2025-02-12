@@ -15,46 +15,18 @@ ASSET_MANAGER.queueDownload("./audio/sfx_point.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_die.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_hit.wav");
 
-
-
 ASSET_MANAGER.downloadAll(() => {
     const canvas = document.getElementById("gameWorld");
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
     
-    const bird = new Bird(gameEngine);
-    gameEngine.addEntity(bird);
-
-    const background = new Background(gameEngine);
-    gameEngine.addEntity(background);
-
-    
-
+    const startPage = new StartPage(gameEngine);
+    gameEngine.addEntity(startPage);
 
     gameEngine.init(ctx);
 
     canvas.tabIndex = 1;
     canvas.focus();
-
-
-    // canvas.addEventListener("keydown", (e) => {
-    //     if (e.key === " " && gameEngine.gameOver) {
-    //         gameEngine.gameOver = false;
-    //         gameEngine.entities.forEach(entity => {
-    //             if (entity.reset) {
-    //                 entity.reset();
-    //             }
-    //         });
-    //     } else if (e.key === " " && !background.gameStarted) {
-    //         background.startGame(); 
-    //     }
-    // });  
-
-    canvas.addEventListener("keydown", (e) => {
-        if (e.key === " " && !background.gameStarted) {
-            background.startGame();  
-        }
-    })
 
     canvas.addEventListener("click", (e) => {
         if (gameEngine.gameOver) {
@@ -77,11 +49,9 @@ ASSET_MANAGER.downloadAll(() => {
                         entity.reset();  
                     }
                 });
-                background.reset();  
             } 
         }
     });
-    
 
     gameEngine.start();
 });
