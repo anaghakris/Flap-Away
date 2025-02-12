@@ -16,19 +16,6 @@ class StartPage {
     }
 
     update() {
-        if (this.game.mouse) {
-            const mouseY = this.game.mouse.y;
-            for (let i = 0; i < this.options.length; i++) {
-                const itemY = this.menuStartY + (i * this.menuSpacing);
-                if (mouseY >= itemY - this.menuItemHeight/2 && 
-                    mouseY <= itemY + this.menuItemHeight/2 &&
-                    this.game.mouse.x >= this.game.ctx.canvas.width/2 - this.menuItemWidth/2 &&
-                    this.game.mouse.x <= this.game.ctx.canvas.width/2 + this.menuItemWidth/2) {
-                    this.selectedOption = i;
-                }
-            }
-        }
-
         if (this.game.keys["ArrowDown"]) {
             this.selectedOption = (this.selectedOption + 1) % this.options.length;
             this.game.keys["ArrowDown"] = false; 
@@ -37,6 +24,7 @@ class StartPage {
             this.selectedOption = (this.selectedOption - 1 + this.options.length) % this.options.length;
             this.game.keys["ArrowUp"] = false; 
         }
+        
         if (this.game.keys["Enter"]) {
             if (this.showingInfo) {
                 this.showingInfo = false;
@@ -45,20 +33,6 @@ class StartPage {
                 this.handleOptionSelection(this.selectedOption);
             }
             this.game.keys["Enter"] = false; 
-        }
-
-        if (this.game.click) {
-            const clickY = this.game.click.y;
-            for (let i = 0; i < this.options.length; i++) {
-                const itemY = this.menuStartY + (i * this.menuSpacing);
-                if (clickY >= itemY - this.menuItemHeight/2 && 
-                    clickY <= itemY + this.menuItemHeight/2 &&
-                    this.game.click.x >= this.game.ctx.canvas.width/2 - this.menuItemWidth/2 &&
-                    this.game.click.x <= this.game.ctx.canvas.width/2 + this.menuItemWidth/2) {
-                    this.handleOptionSelection(i);
-                }
-            }
-            this.game.click = null;
         }
     }
 
