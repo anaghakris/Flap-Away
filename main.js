@@ -37,18 +37,51 @@ ASSET_MANAGER.downloadAll(() => {
     canvas.focus();
 
 
+    // canvas.addEventListener("keydown", (e) => {
+    //     if (e.key === " " && gameEngine.gameOver) {
+    //         gameEngine.gameOver = false;
+    //         gameEngine.entities.forEach(entity => {
+    //             if (entity.reset) {
+    //                 entity.reset();
+    //             }
+    //         });
+    //     } else if (e.key === " " && !background.gameStarted) {
+    //         background.startGame(); 
+    //     }
+    // });  
+
     canvas.addEventListener("keydown", (e) => {
-        if (e.key === " " && gameEngine.gameOver) {
-            gameEngine.gameOver = false;
-            gameEngine.entities.forEach(entity => {
-                if (entity.reset) {
-                    entity.reset();
-                }
-            });
-        } else if (e.key === " " && !background.gameStarted) {
-            background.startGame(); 
+        if (e.key === " " && !background.gameStarted) {
+            background.startGame();  
         }
-    });    
+    })
+
+    canvas.addEventListener("click", (e) => {
+        if (gameEngine.gameOver) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            const btnWidth = 120;
+            const btnHeight = 40;
+            const panelY = (canvas.height - 160) / 2 - 50;
+            const btnX = (canvas.width - btnWidth) / 2;
+            const btnY = panelY + 160 + 10;
+
+            if (clickX >= btnX && clickX <= btnX + btnWidth &&
+                clickY >= btnY && clickY <= btnY + btnHeight) {
+                
+                gameEngine.gameOver = false;  
+                gameEngine.entities.forEach(entity => {
+                    if (entity.reset) {
+                        entity.reset();  
+                    }
+                });
+                background.reset();  
+            } 
+        }
+    });
+    
 
     gameEngine.start();
 });
