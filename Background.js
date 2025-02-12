@@ -431,6 +431,35 @@ class Background {
             ctx.font = '16px "Press Start 2P", monospace'; 
             ctx.fillStyle = colors.text;
             ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
+
+            // return to menu
+            const returnBtnWidth = 240;
+            const returnBtnHeight = 40;
+            const returnBtnX = (this.width - returnBtnWidth) / 2;
+            const returnBtnY = btnY + btnHeight + 10;
+
+            ctx.fillStyle = colors.fill.start;
+            ctx.strokeStyle = colors.border;
+            ctx.lineWidth = 4;
+
+            ctx.beginPath();
+            ctx.moveTo(returnBtnX + 10, returnBtnY);
+            ctx.lineTo(returnBtnX + returnBtnWidth - 10, returnBtnY);
+            ctx.quadraticCurveTo(returnBtnX + returnBtnWidth, returnBtnY, returnBtnX + returnBtnWidth, returnBtnY + 10);
+            ctx.lineTo(returnBtnX + returnBtnWidth, returnBtnY + returnBtnHeight - 10);
+            ctx.quadraticCurveTo(returnBtnX + returnBtnWidth, returnBtnY + returnBtnHeight, returnBtnX + returnBtnWidth - 10, returnBtnY + returnBtnHeight);
+            ctx.lineTo(returnBtnX + 10, returnBtnY + returnBtnHeight);
+            ctx.quadraticCurveTo(returnBtnX, returnBtnY + returnBtnHeight, returnBtnX, returnBtnY + returnBtnHeight - 10);
+            ctx.lineTo(returnBtnX, returnBtnY + 10);
+            ctx.quadraticCurveTo(returnBtnX, returnBtnY, returnBtnX + 10, returnBtnY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.font = '16px "Press Start 2P", monospace'; 
+            ctx.fillStyle = colors.text;
+            ctx.fillText('Return to Menu', returnBtnX + returnBtnWidth / 2, returnBtnY + returnBtnHeight / 2 + 8);
+
         } else if (!this.gameStarted) {
             ctx.font = "24px Arial";
             ctx.fillStyle = "white";

@@ -40,6 +40,12 @@ ASSET_MANAGER.downloadAll(() => {
             const btnX = (canvas.width - btnWidth) / 2;
             const btnY = panelY + 160 + 10;
 
+            // Return to menu button dimensions (new button)
+            const menuBtnWidth = 240;
+            const menuBtnHeight = 40;
+            const menuBtnX = (canvas.width - menuBtnWidth) / 2;
+            const menuBtnY = btnY + btnHeight + 10;
+
             if (clickX >= btnX && clickX <= btnX + btnWidth &&
                 clickY >= btnY && clickY <= btnY + btnHeight) {
                 
@@ -50,6 +56,21 @@ ASSET_MANAGER.downloadAll(() => {
                     }
                 });
             } 
+
+            // Return menu
+            if (clickX >= menuBtnX && clickX <= menuBtnX + menuBtnWidth &&
+                clickY >= menuBtnY && clickY <= menuBtnY + menuBtnHeight) {
+                
+                gameEngine.gameOver = false;  
+                gameEngine.entities.forEach(entity => {
+                    if (entity.reset) {
+                        entity.reset();  
+                    }
+                });
+                gameEngine.entities = []; 
+                const startPage = new StartPage(gameEngine);  
+                gameEngine.addEntity(startPage);  
+            }
         }
     });
 
