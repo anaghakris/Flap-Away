@@ -16,6 +16,8 @@ ASSET_MANAGER.queueDownload("./audio/sfx_die.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_hit.wav");
 ASSET_MANAGER.queueDownload("./audio/coin.wav");
 ASSET_MANAGER.queueDownload("./audio/piranhaPlant.wav");
+ASSET_MANAGER.queueDownload("./audio/sfx_swooshing.wav");
+
 
 
 

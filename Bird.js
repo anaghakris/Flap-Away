@@ -39,6 +39,7 @@ class Bird {
         this.gameStarted = false;
         this.isFlapping = true;
         this.hasPlayedDieSound = false;
+        this.game.hasCollided = false;
         this.lastFlapTime = 0;
         this.score = 0;
     }
@@ -56,10 +57,12 @@ class Bird {
             this.rotation = this.maxRotationDown;
             this.isFlapping = false;
 
-            if (!this.hasPlayedDieSound && this.dieSound) {
-                this.dieSound.currentTime = 0;
-                this.dieSound.play();
-                this.hasPlayedDieSound = true;
+            if (!this.hasPlayedDieSound && !this.game.hasCollided) { 
+                if (this.dieSound) {
+                    this.dieSound.currentTime = 0;
+                    this.dieSound.play();
+                    this.hasPlayedDieSound = true;
+                }
             }
 
             if (this.y > 565 - 70) {

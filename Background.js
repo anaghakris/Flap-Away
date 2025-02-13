@@ -20,6 +20,9 @@ class Background {
         
         this.plantChompSound = ASSET_MANAGER.getAsset("./audio/piranhaPlant.wav");
         this.plantChompSound.volume = 0.35; 
+
+        this.swooshSound = ASSET_MANAGER.getAsset("./audio/sfx_swooshing.wav");
+        this.hasCollided = false;
         
         this.lastSoundTime = 0;       
         this.MIN_SOUND_INTERVAL = 150; 
@@ -79,6 +82,7 @@ class Background {
         this.coins = [];
         this.gameStarted = false;
         this.pipePairCount = 0;
+        this.hasCollided = false;
 
         if (this.pipeSpawnInterval) {
             clearInterval(this.pipeSpawnInterval);
@@ -217,7 +221,12 @@ class Background {
             for (const pipe of this.pipeArray) {
                 if (this.checkPipeCollision(bird, pipe)) {
                     this.playSound(this.hitSound);
+                    if (this.swooshSound) {
+                        this.swooshSound.currentTime = 0;
+                        this.swooshSound.play();
+                    }
                     this.game.gameOver = true;
+                    this.game.hasCollided = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
                     const currentScore = bird.score;
@@ -232,7 +241,12 @@ class Background {
             for (const plant of this.snappingPlants) {
                 if (this.checkPlantCollision(bird, plant)) {
                     this.playSound(this.hitSound);
+                    if (this.swooshSound) {
+                        this.swooshSound.currentTime = 0;
+                        this.swooshSound.play();
+                    }
                     this.game.gameOver = true;
+                    this.game.hasCollided = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
                     const currentScore = bird.score;
