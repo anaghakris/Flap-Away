@@ -7,6 +7,7 @@ ASSET_MANAGER.queueDownload("./Sprites/Background/base.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/bottom pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/top pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Bird/yellowbird-sprite-sheet.png")
+ASSET_MANAGER.queueDownload("./Sprites/Bird/evil_bird.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/SnappingPlant.png"); 
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/snapping plants top.png");
 ASSET_MANAGER.queueDownload("./Sprites/Background/coin.png");
@@ -16,8 +17,6 @@ ASSET_MANAGER.queueDownload("./audio/sfx_die.wav");
 ASSET_MANAGER.queueDownload("./audio/sfx_hit.wav");
 ASSET_MANAGER.queueDownload("./audio/coin.wav");
 ASSET_MANAGER.queueDownload("./audio/piranhaPlant.wav");
-ASSET_MANAGER.queueDownload("./audio/sfx_swooshing.wav");
-
 
 
 

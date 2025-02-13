@@ -11,13 +11,13 @@ class Background {
 
         this.pointSound = ASSET_MANAGER.getAsset("./audio/sfx_point.wav");
         this.pointSound.volume = 0.3; 
-        
+
         this.hitSound = ASSET_MANAGER.getAsset("./audio/sfx_hit.wav");
         this.hitSound.volume = 0.6;    
-        
+
         this.coinSound = ASSET_MANAGER.getAsset("./audio/coin.wav");
         this.coinSound.volume = 0.4;  
-        
+
         this.plantChompSound = ASSET_MANAGER.getAsset("./audio/piranhaPlant.wav");
         this.plantChompSound.volume = 0.35; 
 
@@ -53,6 +53,7 @@ class Background {
         this.pipeSpawnInterval = null;
         this.setupPipeSpawning();
 
+        // Bird & pipe collision parameters
         this.BIRD_WIDTH = 34 * 0.7;
         this.BIRD_HEIGHT = 70 * 0.7;
         this.BIRD_X_OFFSET = 10;
@@ -65,6 +66,28 @@ class Background {
         };
 
         this.coinProgress = new CoinProgress(game, this.width);
+
+        // === NEW: Big Enemy Bird Setup ===
+        this.enemyBigBirdSprite = ASSET_MANAGER.getAsset("./Sprites/Bird/evil_bird.png");
+        this.enemyBigBirds = [];
+        this.enemyBigBirdSpeed = 12;
+        this.enemyBigBirdFrameCount = 5;
+        this.enemyBigBirdFrameDuration = 0.1; // seconds per frame
+
+        // === UPDATED: Only spawn enemy big bird when no pipe has a plant marker
+        this.enemyBigBirdInterval = setInterval(() => {
+            if (this.gameStarted && !this.game.gameOver) {
+                // Check if any visible pipes have plants
+                const hasPlantOnScreen = this.pipeArray.some(pipe => 
+                    pipe.hasPlant && 
+                    pipe.x + pipe.width > 0 && 
+                    pipe.x < this.width
+                );
+                if (!hasPlantOnScreen) {
+                    this.spawnEnemyBigBird();
+                }
+            }
+        }, 3000);
     }
 
     playSound(sound) {
@@ -89,6 +112,9 @@ class Background {
         }
         this.setupPipeSpawning();
         this.coinProgress.reset();
+
+        // Reset enemy big birds
+        this.enemyBigBirds = [];
     }
 
     startGame() {
@@ -160,6 +186,9 @@ class Background {
                     state: "IDLE",
                     lastFrame: -1
                 });
+
+                // Mark the top pipe as having a plant
+                topPipe.hasPlant = true;
             } else {
                 const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
                 const bottomPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
@@ -173,43 +202,62 @@ class Background {
                     state: "IDLE",
                     lastFrame: -1
                 });
+
+                // Mark the bottom pipe as having a plant
+                bottomPipe.hasPlant = true;
             }
         }
 
         this.pipePairCount++;
     }
 
+    // === NEW: Spawn a single big enemy bird that "shoots" across the screen ===
+    spawnEnemyBigBird() {
+        const enemyWidth = this.BIRD_WIDTH * 3;
+        const enemyHeight = this.BIRD_HEIGHT * 2;
+        const x = this.width;
+        const y = 100;
+        let enemyBigBird = {
+            x: x,
+            y: y,
+            width: enemyWidth,
+            height: enemyHeight,
+            elapsedTime: 0 // used for animating the sprite sheet
+        };
+        this.enemyBigBirds.push(enemyBigBird);
+    }
+
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
 
+        // Update pipes
         this.pipeArray.forEach(pipe => {
             pipe.x -= this.pipeSpeed;
         });
 
+        // Update snapping plants
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
             plant.elapsedTime += this.game.clockTick;
-
             const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
-
             if (frame === 3 && plant.lastFrame !== 3) {
                 this.playSound(this.plantChompSound);
             }
             plant.lastFrame = frame;
-
             if (frame === this.snappingPlantFrameCount - 1) {
                 plant.elapsedTime = 0;
             }
-
             this.snappingPlantFrameDuration = 0.3;
         });
 
+        // Update coins
         this.coins.forEach(coin => {
             coin.update();
         });
 
         const bird = this.getBird();
         if (bird) {
+            // Increase score for passing pipes
             this.pipeArray.forEach(pipe => {
                 if (!pipe.passed && bird.x > pipe.x + pipe.width && pipe.type === 'top') {
                     pipe.passed = true;
@@ -218,6 +266,7 @@ class Background {
                 }
             });
 
+            // Check collisions with pipes
             for (const pipe of this.pipeArray) {
                 if (this.checkPipeCollision(bird, pipe)) {
                     this.playSound(this.hitSound);
@@ -238,6 +287,7 @@ class Background {
                 }
             }
 
+            // Check collisions with snapping plants
             for (const plant of this.snappingPlants) {
                 if (this.checkPlantCollision(bird, plant)) {
                     this.playSound(this.hitSound);
@@ -258,10 +308,31 @@ class Background {
                 }
             }
 
+            // Check collisions with coins
             this.coins.forEach(coin => {
                 if (!coin.collected && coin.checkCollision(bird)) {
                     coin.collected = true;
                     this.coinProgress.collectCoin();
+                }
+            });
+
+            // Check collisions with the enemy big bird(s)
+            this.enemyBigBirds.forEach(enemy => {
+                if (this.checkEnemyBigBirdCollision(bird, enemy)) {
+                    this.playSound(this.hitSound);
+                    if (this.swooshSound) {
+                        this.swooshSound.currentTime = 0;
+                        this.swooshSound.play();
+                    }
+                    this.game.gameOver = true;
+                    this.game.hasCollided = true;
+                    bird.velocity = 0;
+                    bird.rotation = bird.maxRotationDown;
+                    const currentScore = bird.score;
+                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                    if (currentScore > bestScore) {
+                        localStorage.setItem('bestScore', currentScore.toString());
+                    }
                 }
             });
         }
@@ -275,6 +346,13 @@ class Background {
             return isOnScreen && !hasCompletedAnimation;
         });
         this.coins = this.coins.filter(coin => !coin.collected && coin.x + 50 > 0);
+
+        // Update enemy big birds: move them left and update their animation timer
+        this.enemyBigBirds.forEach(enemy => {
+            enemy.x -= this.enemyBigBirdSpeed;
+            enemy.elapsedTime += this.game.clockTick;
+        });
+        this.enemyBigBirds = this.enemyBigBirds.filter(enemy => enemy.x + enemy.width > 0);
     }
 
     getBird() {
@@ -303,11 +381,8 @@ class Background {
     checkPlantCollision(bird, plant) {
         if (plant.elapsedTime < 0) return false;
 
-        const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % 
-            this.snappingPlantFrameCount;
-
+        const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
         plant.state = (frame >= 2 && frame <= 4) ? "SNAPPING" : "IDLE";
-
         const collisionFactors = this.PLANT_COLLISION_STATES[plant.state];
 
         const birdLeft = bird.x + this.BIRD_X_OFFSET;
@@ -329,8 +404,7 @@ class Background {
                 plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale - collisionHeight;
             }
         } else {
-            plantCollisionY = plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * 
-                (plant.state === "SNAPPING" ? 0.9 : 0.8);
+            plantCollisionY = plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * (plant.state === "SNAPPING" ? 0.9 : 0.8);
         }
 
         return (
@@ -341,7 +415,26 @@ class Background {
         );
     }
 
-   
+    // === NEW: Collision check for the enemy big bird ===
+    checkEnemyBigBirdCollision(bird, enemy) {
+        const birdLeft = bird.x + this.BIRD_X_OFFSET;
+        const birdRight = birdLeft + this.BIRD_WIDTH;
+        const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        const birdBottom = birdTop + this.BIRD_HEIGHT;
+
+        const enemyLeft = enemy.x;
+        const enemyRight = enemy.x + enemy.width;
+        const enemyTop = enemy.y;
+        const enemyBottom = enemy.y + enemy.height;
+
+        return (
+            birdRight > enemyLeft &&
+            birdLeft < enemyRight &&
+            birdBottom > enemyTop &&
+            birdTop < enemyBottom
+        );
+    }
+
     draw(ctx) {
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
 
@@ -371,12 +464,8 @@ class Background {
 
         this.snappingPlants.forEach(plant => {
             if (plant.elapsedTime < 0) return;
-
-            const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % 
-                this.snappingPlantFrameCount;
-            const sprite = plant.type === "bottom" ?
-                this.snappingPlantSprite : this.snappingPlantTop;
-
+            const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
+            const sprite = plant.type === "bottom" ? this.snappingPlantSprite : this.snappingPlantTop;
             ctx.drawImage(
                 sprite,
                 frame * this.snappingPlantFrameWidth, 0,
@@ -387,13 +476,23 @@ class Background {
             );
         });
 
-        ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
+        // === NEW: Draw the animated enemy big bird(s) ===
+        const frameWidth = 250; // Adjusted frame width for enemy bird
+        const frameHeight = 202; // Frame height remains the same
+        this.enemyBigBirds.forEach(enemy => {
+            const frameIndex = Math.floor(enemy.elapsedTime / this.enemyBigBirdFrameDuration) % this.enemyBigBirdFrameCount;
+            ctx.drawImage(
+                this.enemyBigBirdSprite,
+                frameIndex * frameWidth, 0, frameWidth, frameHeight,
+                enemy.x, enemy.y, enemy.width, enemy.height
+            );
+        });
 
+        ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
         this.coinProgress.draw(ctx);
 
         if (this.game.gameOver) {
             const colors = this.coinProgress.colors;
-
             const panelWidth = 180; 
             const panelHeight = 160; 
             const panelX = (this.width - panelWidth) / 2;
@@ -402,7 +501,6 @@ class Background {
             ctx.fillStyle = colors.background;
             ctx.strokeStyle = colors.border;
             ctx.lineWidth = 4;
-            
             ctx.beginPath();
             ctx.moveTo(panelX + 10, panelY);
             ctx.lineTo(panelX + panelWidth - 10, panelY);
@@ -428,8 +526,7 @@ class Background {
 
             ctx.fillStyle = colors.text;
             ctx.font = '20px "Press Start 2P", monospace'; 
-            ctx.fillText(this.getBird()?.score.toString() || '0', 
-                panelX + panelWidth / 2, panelY + 90);
+            ctx.fillText(this.getBird()?.score.toString() || '0', panelX + panelWidth / 2, panelY + 90);
 
             ctx.font = '16px "Press Start 2P", monospace'; 
             ctx.fillStyle = colors.title.main;
@@ -448,7 +545,6 @@ class Background {
             ctx.fillStyle = colors.fill.start;
             ctx.strokeStyle = colors.border;
             ctx.lineWidth = 4;
-            
             ctx.beginPath();
             ctx.moveTo(btnX + 10, btnY);
             ctx.lineTo(btnX + btnWidth - 10, btnY);
@@ -467,7 +563,6 @@ class Background {
             ctx.fillStyle = colors.text;
             ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
 
-            // return to menu
             const returnBtnWidth = 240;
             const returnBtnHeight = 40;
             const returnBtnX = (this.width - returnBtnWidth) / 2;
@@ -476,7 +571,6 @@ class Background {
             ctx.fillStyle = colors.fill.start;
             ctx.strokeStyle = colors.border;
             ctx.lineWidth = 4;
-
             ctx.beginPath();
             ctx.moveTo(returnBtnX + 10, returnBtnY);
             ctx.lineTo(returnBtnX + returnBtnWidth - 10, returnBtnY);
