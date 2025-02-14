@@ -65,19 +65,17 @@ class Background {
             SNAPPING: { widthFactor: 0.6, heightFactor: 0.6 }
         };
 
-        this.coinProgress = new CoinProgress(game, this.width);
+        // Create coin progress with maxCoins set to 3
+        this.coinProgress = new CoinProgress(game, this.width, 3);
 
-        // === NEW: Big Enemy Bird Setup ===
         this.enemyBigBirdSprite = ASSET_MANAGER.getAsset("./Sprites/Bird/evil_bird.png");
         this.enemyBigBirds = [];
         this.enemyBigBirdSpeed = 12;
         this.enemyBigBirdFrameCount = 5;
-        this.enemyBigBirdFrameDuration = 0.1; // seconds per frame
+        this.enemyBigBirdFrameDuration = 0.1; 
 
-        // === UPDATED: Only spawn enemy big bird when no pipe has a plant marker
         this.enemyBigBirdInterval = setInterval(() => {
             if (this.gameStarted && !this.game.gameOver) {
-                // Check if any visible pipes have plants
                 const hasPlantOnScreen = this.pipeArray.some(pipe => 
                     pipe.hasPlant && 
                     pipe.x + pipe.width > 0 && 
@@ -203,7 +201,6 @@ class Background {
                     lastFrame: -1
                 });
 
-                // Mark the bottom pipe as having a plant
                 bottomPipe.hasPlant = true;
             }
         }
@@ -211,7 +208,6 @@ class Background {
         this.pipePairCount++;
     }
 
-    // === NEW: Spawn a single big enemy bird that "shoots" across the screen ===
     spawnEnemyBigBird() {
         const enemyWidth = this.BIRD_WIDTH * 3;
         const enemyHeight = this.BIRD_HEIGHT * 2;
@@ -222,7 +218,7 @@ class Background {
             y: y,
             width: enemyWidth,
             height: enemyHeight,
-            elapsedTime: 0 // used for animating the sprite sheet
+            elapsedTime: 0 
         };
         this.enemyBigBirds.push(enemyBigBird);
     }
@@ -230,12 +226,10 @@ class Background {
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
 
-        // Update pipes
         this.pipeArray.forEach(pipe => {
             pipe.x -= this.pipeSpeed;
         });
 
-        // Update snapping plants
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
             plant.elapsedTime += this.game.clockTick;
@@ -257,7 +251,7 @@ class Background {
 
         const bird = this.getBird();
         if (bird) {
-            // Increase score for passing pipes
+            // Increase score for passing pipes regardless of invincibility
             this.pipeArray.forEach(pipe => {
                 if (!pipe.passed && bird.x > pipe.x + pipe.width && pipe.type === 'top') {
                     pipe.passed = true;
@@ -266,72 +260,82 @@ class Background {
                 }
             });
 
-            // Check collisions with pipes
-            for (const pipe of this.pipeArray) {
-                if (this.checkPipeCollision(bird, pipe)) {
-                    this.playSound(this.hitSound);
-                    if (this.swooshSound) {
-                        this.swooshSound.currentTime = 0;
-                        this.swooshSound.play();
+            // Only perform collision checks if the bird is not invincible
+            if (!bird.invincible) {
+                // Check collisions with pipes
+                for (const pipe of this.pipeArray) {
+                    if (this.checkPipeCollision(bird, pipe)) {
+                        this.playSound(this.hitSound);
+                        if (this.swooshSound) {
+                            this.swooshSound.currentTime = 0;
+                            this.swooshSound.play();
+                        }
+                        this.game.gameOver = true;
+                        this.game.hasCollided = true;
+                        bird.velocity = 0;
+                        bird.rotation = bird.maxRotationDown;
+                        const currentScore = bird.score;
+                        const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                        if (currentScore > bestScore) {
+                            localStorage.setItem('bestScore', currentScore.toString());
+                        }
+                        break;
                     }
-                    this.game.gameOver = true;
-                    this.game.hasCollided = true;
-                    bird.velocity = 0;
-                    bird.rotation = bird.maxRotationDown;
-                    const currentScore = bird.score;
-                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                    if (currentScore > bestScore) {
-                        localStorage.setItem('bestScore', currentScore.toString());
-                    }
-                    break;
                 }
+
+                // Check collisions with snapping plants
+                for (const plant of this.snappingPlants) {
+                    if (this.checkPlantCollision(bird, plant)) {
+                        this.playSound(this.hitSound);
+                        if (this.swooshSound) {
+                            this.swooshSound.currentTime = 0;
+                            this.swooshSound.play();
+                        }
+                        this.game.gameOver = true;
+                        this.game.hasCollided = true;
+                        bird.velocity = 0;
+                        bird.rotation = bird.maxRotationDown;
+                        const currentScore = bird.score;
+                        const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                        if (currentScore > bestScore) {
+                            localStorage.setItem('bestScore', currentScore.toString());
+                        }
+                        break;
+                    }
+                }
+
+                // Check collisions with the enemy big bird(s)
+                this.enemyBigBirds.forEach(enemy => {
+                    if (this.checkEnemyBigBirdCollision(bird, enemy)) {
+                        this.playSound(this.hitSound);
+                        if (this.swooshSound) {
+                            this.swooshSound.currentTime = 0;
+                            this.swooshSound.play();
+                        }
+                        this.game.gameOver = true;
+                        this.game.hasCollided = true;
+                        bird.velocity = 0;
+                        bird.rotation = bird.maxRotationDown;
+                        const currentScore = bird.score;
+                        const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                        if (currentScore > bestScore) {
+                            localStorage.setItem('bestScore', currentScore.toString());
+                        }
+                    }
+                });
             }
 
-            // Check collisions with snapping plants
-            for (const plant of this.snappingPlants) {
-                if (this.checkPlantCollision(bird, plant)) {
-                    this.playSound(this.hitSound);
-                    if (this.swooshSound) {
-                        this.swooshSound.currentTime = 0;
-                        this.swooshSound.play();
-                    }
-                    this.game.gameOver = true;
-                    this.game.hasCollided = true;
-                    bird.velocity = 0;
-                    bird.rotation = bird.maxRotationDown;
-                    const currentScore = bird.score;
-                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                    if (currentScore > bestScore) {
-                        localStorage.setItem('bestScore', currentScore.toString());
-                    }
-                    break;
-                }
-            }
-
-            // Check collisions with coins
+            // Check collisions with coins (always allow coin collection)
             this.coins.forEach(coin => {
                 if (!coin.collected && coin.checkCollision(bird)) {
                     coin.collected = true;
                     this.coinProgress.collectCoin();
-                }
-            });
 
-            // Check collisions with the enemy big bird(s)
-            this.enemyBigBirds.forEach(enemy => {
-                if (this.checkEnemyBigBirdCollision(bird, enemy)) {
-                    this.playSound(this.hitSound);
-                    if (this.swooshSound) {
-                        this.swooshSound.currentTime = 0;
-                        this.swooshSound.play();
-                    }
-                    this.game.gameOver = true;
-                    this.game.hasCollided = true;
-                    bird.velocity = 0;
-                    bird.rotation = bird.maxRotationDown;
-                    const currentScore = bird.score;
-                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                    if (currentScore > bestScore) {
-                        localStorage.setItem('bestScore', currentScore.toString());
+                    // --- NEW: If coin progress reaches max (3 coins), trigger invincibility ---
+                    if (this.coinProgress.coinsCollected >= this.coinProgress.maxCoins) {
+                        bird.invincible = true;
+                        bird.invincibleTimer = 10; // 10 seconds of invincibility
+                        this.coinProgress.reset(); // reset coin progress if desired
                     }
                 }
             });

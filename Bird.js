@@ -29,6 +29,10 @@ class Bird {
         this.BIRD_HEIGHT = 50 * 0.6;
         this.BIRD_X_OFFSET = 5;
         this.BIRD_Y_OFFSET = 5;
+
+        // NEW: Invincibility properties
+        this.invincible = false;
+        this.invincibleTimer = 0; // seconds remaining
     }
 
     reset() {
@@ -42,6 +46,8 @@ class Bird {
         this.game.hasCollided = false;
         this.lastFlapTime = 0;
         this.score = 0;
+        this.invincible = false;
+        this.invincibleTimer = 0;
     }
 
     startGame() {
@@ -50,6 +56,15 @@ class Bird {
 
     update() {
         if (!this.gameStarted) return;
+
+        // --- NEW: Update invincibility timer ---
+        if (this.invincible) {
+            this.invincibleTimer -= this.game.clockTick; // assuming clockTick is in seconds
+            if (this.invincibleTimer <= 0) {
+                this.invincible = false;
+                this.invincibleTimer = 0;
+            }
+        }
 
         if (this.game.gameOver) {
             this.velocity += this.gravity;
@@ -126,8 +141,16 @@ class Bird {
                 34 * 2 * scale, 70 * 2 * scale
             );
         }
-
         ctx.restore();
+
+        // OPTIONAL: Visual cue for invincibility (yellow outline)
+        if (this.invincible) {
+            ctx.beginPath();
+            ctx.arc(this.x + 34 * scale / 2, this.y + 70 * scale / 2, 40, 0, Math.PI * 2);
+            ctx.strokeStyle = "yellow";
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        }
 
         ctx.font = "30px Arial";
         ctx.fillStyle = "white";

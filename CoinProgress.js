@@ -1,5 +1,5 @@
 class CoinProgress {
-    constructor(game, width = 800, maxCoins = 12) {
+    constructor(game, width = 800, maxCoins = 3) { // changed maxCoins to 3
         this.game = game;
         this.width = width;
         this.maxCoins = maxCoins;
