@@ -19,6 +19,8 @@ class Bird {
 
         this.flapSound = ASSET_MANAGER.getAsset("./audio/sfx_wing.wav");
         this.dieSound = ASSET_MANAGER.getAsset("./audio/sfx_die.wav");
+        this.powerUpSound = ASSET_MANAGER.getAsset("./audio/powerup.wav");
+        this.powerSoundLoop = null;
         this.hasPlayedDieSound = false;
         this.lastFlapTime = 0;
         this.flapCooldown = 250;
@@ -30,9 +32,30 @@ class Bird {
         this.BIRD_X_OFFSET = 5;
         this.BIRD_Y_OFFSET = 5;
 
-        // NEW: Invincibility properties
         this.invincible = false;
-        this.invincibleTimer = 0; // seconds remaining
+        this.invincibleTimer = 0;
+        
+        this.invincibleEffects = {
+            glowRadius: 40,
+            glowOpacity: 0.6,
+            sparkleTimer: 0,
+            sparkles: [],
+            trailPoints: [],
+            maxTrailPoints: 10,
+            rainbowHue: 0
+        };
+
+        this.powerUpAnimation = {
+            active: false,
+            duration: 2,
+            timer: 0,
+            scale: 0,
+            opacity: 0,
+            flashTimer: 0,
+            flashDuration: 0.1,
+            showFlash: false,
+            textY: -50
+        };
     }
 
     reset() {
@@ -48,25 +71,81 @@ class Bird {
         this.score = 0;
         this.invincible = false;
         this.invincibleTimer = 0;
+        this.powerUpAnimation.active = false;
+        
+        if (this.powerSoundLoop) {
+            this.powerSoundLoop.pause();
+            this.powerSoundLoop = null;
+        }
     }
 
     startGame() {
         this.gameStarted = true;
     }
 
+    activatePowerUp() {
+        this.invincible = true;
+        this.invincibleTimer = 10;
+        this.powerUpAnimation.active = true;
+        this.powerUpAnimation.timer = 0;
+        
+        if (this.powerUpSound) {
+            this.powerSoundLoop = this.powerUpSound.cloneNode();
+            this.powerSoundLoop.volume = 0.3;
+            this.powerSoundLoop.loop = true;
+            this.powerSoundLoop.play().catch(e => console.log("Audio play failed:", e));
+        }
+    }
+
     update() {
         if (!this.gameStarted) return;
 
-        // --- NEW: Update invincibility timer ---
         if (this.invincible) {
-            this.invincibleTimer -= this.game.clockTick; // assuming clockTick is in seconds
+            this.invincibleTimer -= this.game.clockTick;
             if (this.invincibleTimer <= 0) {
                 this.invincible = false;
                 this.invincibleTimer = 0;
+                this.powerUpAnimation.active = false;
+                
+                if (this.powerSoundLoop) {
+                    this.powerSoundLoop.pause();
+                    this.powerSoundLoop = null;
+                }
+            }
+        }
+
+        if (this.powerUpAnimation.active) {
+            this.powerUpAnimation.timer += this.game.clockTick;
+            
+            if (this.powerUpAnimation.timer <= 0.5) {
+                this.powerUpAnimation.scale = this.powerUpAnimation.timer * 2;
+                this.powerUpAnimation.opacity = this.powerUpAnimation.timer * 2;
+            }
+            else if (this.powerUpAnimation.timer <= 1.5) {
+                this.powerUpAnimation.scale = 1;
+                this.powerUpAnimation.opacity = 1;
+            }
+            else if (this.powerUpAnimation.timer <= 2) {
+                const fadeProgress = (this.powerUpAnimation.timer - 1.5) * 2;
+                this.powerUpAnimation.opacity = 1 - fadeProgress;
+            }
+            else {
+                this.powerUpAnimation.active = false;
+            }
+
+            this.powerUpAnimation.flashTimer += this.game.clockTick;
+            if (this.powerUpAnimation.flashTimer >= this.powerUpAnimation.flashDuration) {
+                this.powerUpAnimation.showFlash = !this.powerUpAnimation.showFlash;
+                this.powerUpAnimation.flashTimer = 0;
             }
         }
 
         if (this.game.gameOver) {
+            if (this.powerSoundLoop) {
+                this.powerSoundLoop.pause();
+                this.powerSoundLoop = null;
+            }
+            
             this.velocity += this.gravity;
             this.y += this.velocity;
             this.rotation = this.maxRotationDown;
@@ -125,6 +204,14 @@ class Bird {
     }
 
     draw(ctx) {
+        if (this.powerUpAnimation.active) {
+            this.drawPowerUpAnimation(ctx);
+        }
+
+        if (this.invincible) {
+            this.drawPowerBoostEffects(ctx);
+        }
+
         ctx.save();
         ctx.translate(this.x + 34 / 2, this.y + 70 / 2);
         ctx.rotate(this.rotation);
@@ -132,25 +219,24 @@ class Bird {
         const scale = 0.6;
 
         if (this.isFlapping) {
+            if (this.invincible) {
+                ctx.shadowColor = `hsla(${this.invincibleEffects.rainbowHue}, 100%, 50%, 0.8)`;
+                ctx.shadowBlur = 15;
+            }
             this.animator.drawFrame(this.game.clockTick, ctx, this.x, this.y, 2 * scale);
         } else {
+            if (this.invincible) {
+                ctx.shadowColor = `hsla(${this.invincibleEffects.rainbowHue}, 100%, 50%, 0.8)`;
+                ctx.shadowBlur = 15;
+            }
             ctx.drawImage(
                 this.animator.spritesheet,
-                0, 0, 34, 70, 
-                this.x, this.y, 
+                0, 0, 34, 70,
+                this.x, this.y,
                 34 * 2 * scale, 70 * 2 * scale
             );
         }
         ctx.restore();
-
-        // OPTIONAL: Visual cue for invincibility (yellow outline)
-        if (this.invincible) {
-            ctx.beginPath();
-            ctx.arc(this.x + 34 * scale / 2, this.y + 70 * scale / 2, 40, 0, Math.PI * 2);
-            ctx.strokeStyle = "yellow";
-            ctx.lineWidth = 4;
-            ctx.stroke();
-        }
 
         ctx.font = "30px Arial";
         ctx.fillStyle = "white";
@@ -158,5 +244,110 @@ class Bird {
         ctx.lineWidth = 3;
         ctx.strokeText(this.score.toString(), 400, 50);
         ctx.fillText(this.score.toString(), 400, 50);
+
+        if (this.invincible) {
+            ctx.font = "20px Arial";
+            ctx.fillStyle = "white";
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 2;
+            ctx.strokeText(`Power: ${Math.ceil(this.invincibleTimer)}s`, 400, 80);
+            ctx.fillText(`Power: ${Math.ceil(this.invincibleTimer)}s`, 400, 80);
+        }
+    }
+
+    drawPowerUpAnimation(ctx) {
+        const centerX = this.game.width / 2;
+        const centerY = this.game.height / 2;
+
+        if (this.powerUpAnimation.showFlash && this.powerUpAnimation.timer <= 0.5) {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillRect(0, 0, this.game.width, this.game.height);
+        }
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.scale(this.powerUpAnimation.scale, this.powerUpAnimation.scale);
+
+        if (this.powerUpAnimation.timer <= 1) {
+            const numRays = 12;
+            const maxRayLength = 150 * this.powerUpAnimation.scale;
+            
+            ctx.save();
+            ctx.translate(0, this.powerUpAnimation.textY);
+            ctx.rotate(this.powerUpAnimation.timer * Math.PI);
+
+            for (let i = 0; i < numRays; i++) {
+                const angle = (i / numRays) * Math.PI * 2;
+                const rayLength = maxRayLength * (0.5 + Math.sin(this.powerUpAnimation.timer * 10) * 0.5);
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(Math.cos(angle) * rayLength, Math.sin(angle) * rayLength);
+                ctx.strokeStyle = `rgba(255, 165, 0, ${this.powerUpAnimation.opacity * 0.5})`;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        ctx.restore();
+    }
+
+    drawPowerBoostEffects(ctx) {
+        const birdCenterX = this.x + 34 * 0.6;
+        const birdCenterY = this.y + 70 * 0.6;
+
+        this.invincibleEffects.rainbowHue = (this.invincibleEffects.rainbowHue + 2) % 360;
+
+        const gradient = ctx.createRadialGradient(
+            birdCenterX, birdCenterY, 10,
+            birdCenterX, birdCenterY, this.invincibleEffects.glowRadius
+        );
+        gradient.addColorStop(0, `hsla(${this.invincibleEffects.rainbowHue}, 100%, 50%, ${this.invincibleEffects.glowOpacity})`);
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        
+        ctx.beginPath();
+        ctx.arc(birdCenterX, birdCenterY, this.invincibleEffects.glowRadius, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        this.invincibleEffects.trailPoints.unshift({ x: birdCenterX, y: birdCenterY });
+        if (this.invincibleEffects.trailPoints.length > this.invincibleEffects.maxTrailPoints) {
+            this.invincibleEffects.trailPoints.pop();
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(this.invincibleEffects.trailPoints[0].x, this.invincibleEffects.trailPoints[0].y);
+        for (let i = 1; i < this.invincibleEffects.trailPoints.length; i++) {
+            const point = this.invincibleEffects.trailPoints[i];
+            ctx.lineTo(point.x, point.y);
+        }
+        ctx.strokeStyle = `hsla(${(this.invincibleEffects.rainbowHue + 180) % 360}, 100%, 50%, 0.5)`;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        this.invincibleEffects.sparkleTimer += this.game.clockTick;
+        if (this.invincibleEffects.sparkleTimer > 0.1) {
+            this.invincibleEffects.sparkleTimer = 0;
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * 30;
+            this.invincibleEffects.sparkles.push({
+                x: birdCenterX + Math.cos(angle) * distance,
+                y: birdCenterY + Math.sin(angle) * distance,
+                size: 2 + Math.random() * 3,
+                life: 1
+            });
+        }
+
+        this.invincibleEffects.sparkles = this.invincibleEffects.sparkles.filter(sparkle => {
+            sparkle.life -= this.game.clockTick * 2;
+            if (sparkle.life <= 0) return false;
+
+            ctx.beginPath();
+            ctx.arc(sparkle.x, sparkle.y, sparkle.size, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${this.invincibleEffects.rainbowHue}, 100%, 50%, ${sparkle.life})`;
+            ctx.fill();
+            return true;
+        });
     }
 }

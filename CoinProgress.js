@@ -1,5 +1,5 @@
 class CoinProgress {
-    constructor(game, width = 800, maxCoins = 3) { // changed maxCoins to 3
+    constructor(game, width = 800, maxCoins = 3) {
         this.game = game;
         this.width = width;
         this.maxCoins = maxCoins;
@@ -25,6 +25,14 @@ class CoinProgress {
     collectCoin() {
         if (this.coinsCollected < this.maxCoins) {
             this.coinsCollected++;
+            
+            if (this.coinsCollected >= this.maxCoins) {
+                const bird = this.game.entities.find(entity => entity instanceof Bird);
+                if (bird) {
+                    bird.activatePowerUp();
+                }
+                this.reset();
+            }
         }
     }
 
@@ -40,7 +48,14 @@ class CoinProgress {
         return gradient;
     }
 
-    drawTitle(ctx, barX, barWidth) {
+    draw(ctx) {
+        const barWidth = 160;
+        const barHeight = 30;
+        const barX = 20;
+        const barY = 35;
+        const cornerRadius = 15;
+
+        // Draw title
         const titleX = barX + barWidth / 2;
         const titleY = 20;
         const titleText = 'COIN TRACKER';
@@ -58,17 +73,8 @@ class CoinProgress {
         ctx.lineWidth = 1;
         ctx.strokeStyle = this.colors.title.outline;
         ctx.strokeText(titleText, titleX, titleY);
-    }
 
-    draw(ctx) {
-        const barWidth = 160;
-        const barHeight = 30;
-        const barX = 20;
-        const barY = 35;
-        const cornerRadius = 15;
-
-        this.drawTitle(ctx, barX, barWidth);
-
+        // Draw progress bar
         ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
         ctx.shadowBlur = 5;
         ctx.shadowOffsetX = 2;
@@ -102,9 +108,6 @@ class CoinProgress {
             if (fillWidth > barWidth - cornerRadius) {
                 ctx.quadraticCurveTo(barX + fillWidth, barY + 2, 
                     barX + fillWidth, barY + cornerRadius);
-            }
-            
-            if (fillWidth > barWidth - cornerRadius) {
                 ctx.lineTo(barX + fillWidth, barY + barHeight - cornerRadius);
                 ctx.quadraticCurveTo(barX + fillWidth, barY + barHeight - 2, 
                     barX + fillWidth - cornerRadius, barY + barHeight - 2);
@@ -120,10 +123,12 @@ class CoinProgress {
             ctx.fillStyle = this.createGradient(ctx, barX, barY, barWidth, barHeight);
             ctx.fill();
         }
+
         ctx.lineWidth = 2;
         ctx.strokeStyle = this.colors.border;
         ctx.stroke();
 
+        // Draw coin counter text
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
         ctx.shadowBlur = 3;
         ctx.shadowOffsetX = 1;
