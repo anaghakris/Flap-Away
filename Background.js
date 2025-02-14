@@ -41,6 +41,10 @@ class Background {
         this.pipeSpacing = 200;
         this.pipeInterval = 2000;
 
+        // NEW: Increase randomness for gap opening between pipes (between 150 and 200)
+        this.minOpening = 150;
+        this.maxOpening = 200;
+
         this.snappingPlantFrameWidth = 158;
         this.snappingPlantFrameHeight = 250;
         this.snappingPlantTopFrameHeight = 90;
@@ -135,7 +139,8 @@ class Background {
     spawnPipePair() {
         if (!this.gameStarted || this.game.gameOver) return;
 
-        const opening = 150;
+        // Use a random opening (gap) between minOpening and maxOpening
+        const opening = this.minOpening + Math.random() * (this.maxOpening - this.minOpening);
         const minTopPipeHeight = 50;
         const maxTopPipeHeight = this.baseY - opening - 100;
         const topPipeHeight = minTopPipeHeight + Math.random() * (maxTopPipeHeight - minTopPipeHeight);
@@ -212,7 +217,39 @@ class Background {
         const enemyWidth = this.BIRD_WIDTH * 3;
         const enemyHeight = this.BIRD_HEIGHT * 2;
         const x = this.width;
-        const y = 100;
+        let y = 100; 
+    
+        let topPipe = this.pipeArray.find(pipe => pipe.type === 'top' && Math.abs(pipe.x - this.width) < 10);
+        let bottomPipe = null;
+        if (topPipe) {
+            bottomPipe = this.pipeArray.find(pipe => pipe.type === 'bottom' && Math.abs(pipe.x - topPipe.x) < 5);
+        }
+    
+        if (topPipe && bottomPipe) {
+            const gapTop = topPipe.height;
+            const gapBottom = bottomPipe.y;
+    
+            const spaceAbove = gapTop - enemyHeight; 
+            const spaceBelow = this.baseY - enemyHeight - gapBottom;
+    
+            let possiblePositions = [];
+            if (spaceAbove > 0) possiblePositions.push('above');
+            if (spaceBelow > 0) possiblePositions.push('below');
+    
+            if (possiblePositions.length > 0) {
+                const chosenArea = possiblePositions[Math.floor(Math.random() * possiblePositions.length)];
+                if (chosenArea === 'above') {
+                    y = Math.random() * spaceAbove;
+                } else {
+                    y = gapBottom + Math.random() * spaceBelow;
+                }
+            } else {
+                y = gapTop - enemyHeight - 10;
+            }
+        } else {
+            y = Math.random() * (this.baseY - enemyHeight);
+        }
+    
         let enemyBigBird = {
             x: x,
             y: y,
@@ -222,6 +259,7 @@ class Background {
         };
         this.enemyBigBirds.push(enemyBigBird);
     }
+    
 
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
@@ -480,7 +518,6 @@ class Background {
             );
         });
 
-        // === NEW: Draw the animated enemy big bird(s) ===
         const frameWidth = 250; // Adjusted frame width for enemy bird
         const frameHeight = 202; // Frame height remains the same
         this.enemyBigBirds.forEach(enemy => {
