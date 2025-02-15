@@ -10,22 +10,22 @@ class Background {
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
 
         this.pointSound = ASSET_MANAGER.getAsset("./audio/sfx_point.wav");
-        this.pointSound.volume = 0.3; 
+        this.pointSound.volume = 0.3;
 
         this.hitSound = ASSET_MANAGER.getAsset("./audio/sfx_hit.wav");
-        this.hitSound.volume = 0.6;    
+        this.hitSound.volume = 0.6;
 
         this.coinSound = ASSET_MANAGER.getAsset("./audio/coin.wav");
-        this.coinSound.volume = 0.4;  
+        this.coinSound.volume = 0.4;
 
         this.plantChompSound = ASSET_MANAGER.getAsset("./audio/piranhaPlant.wav");
-        this.plantChompSound.volume = 0.35; 
+        this.plantChompSound.volume = 0.35;
 
         this.swooshSound = ASSET_MANAGER.getAsset("./audio/sfx_swooshing.wav");
         this.hasCollided = false;
-        
-        this.lastSoundTime = 0;       
-        this.MIN_SOUND_INTERVAL = 150; 
+
+        this.lastSoundTime = 0;
+        this.MIN_SOUND_INTERVAL = 150;
 
         this.width = 800;
         this.height = 600;
@@ -41,7 +41,6 @@ class Background {
         this.pipeSpacing = 200;
         this.pipeInterval = 2000;
 
-        // NEW: Increase randomness for gap opening between pipes (between 150 and 200)
         this.minOpening = 150;
         this.maxOpening = 200;
 
@@ -57,7 +56,6 @@ class Background {
         this.pipeSpawnInterval = null;
         this.setupPipeSpawning();
 
-        // Bird & pipe collision parameters
         this.BIRD_WIDTH = 34 * 0.7;
         this.BIRD_HEIGHT = 70 * 0.7;
         this.BIRD_X_OFFSET = 10;
@@ -69,27 +67,31 @@ class Background {
             SNAPPING: { widthFactor: 0.6, heightFactor: 0.6 }
         };
 
-        // Create coin progress with maxCoins set to 3
         this.coinProgress = new CoinProgress(game, this.width, 3);
 
         this.enemyBigBirdSprite = ASSET_MANAGER.getAsset("./Sprites/Bird/evil_bird.png");
         this.enemyBigBirds = [];
         this.enemyBigBirdSpeed = 12;
         this.enemyBigBirdFrameCount = 5;
-        this.enemyBigBirdFrameDuration = 0.1; 
+        this.enemyBigBirdFrameDuration = 0.1;
 
-        this.enemyBigBirdInterval = setInterval(() => {
-            if (this.gameStarted && !this.game.gameOver) {
-                const hasPlantOnScreen = this.pipeArray.some(pipe => 
-                    pipe.hasPlant && 
-                    pipe.x + pipe.width > 0 && 
-                    pipe.x < this.width
-                );
-                if (!hasPlantOnScreen) {
-                    this.spawnEnemyBigBird();
-                }
-            }
-        }, 3000);
+        // === Evil bird wave properties ===
+        this.dangerDisplayTime = 0; // How long to show the warning
+        this.DANGER_DURATION = 1.0; // Show warning for 1 second
+        this.evilWaveActive = false; // Track if an evil wave is active
+        this.evilWaveTriggered = false; // Track if the evil wave has been triggered
+        this.EVIL_WAVE_PIPE_COUNT = 25; // Trigger evil wave at 25 pipes
+        this.evilWaveBirdsSpawned = 0; // Track how many birds have been spawned in the wave
+        this.evilWaveInterval = null; // Interval for spawning birds in the wave
+
+        // === Level passed message and delay properties ===
+        this.levelPassedMessageDuration = 3; // Duration to show the "Level One Passed" message
+        this.levelPassedMessageTime = 0; // Timer for the message
+        this.postEvilWaveDelay = 5; // Delay in seconds before spawning pipes again
+        this.postEvilWaveDelayTimer = 0; // Timer for the delay
+
+        // === State to track when the evil wave has fully ended ===
+        this.evilWaveFullyEnded = false; // Tracks if the evil wave has fully ended (birds and danger are gone)
     }
 
     playSound(sound) {
@@ -115,8 +117,18 @@ class Background {
         this.setupPipeSpawning();
         this.coinProgress.reset();
 
-        // Reset enemy big birds
         this.enemyBigBirds = [];
+        this.evilWaveActive = false;
+        this.evilWaveTriggered = false;
+        this.evilWaveBirdsSpawned = 0;
+        if (this.evilWaveInterval) {
+            clearInterval(this.evilWaveInterval);
+        }
+
+        // Reset level passed message and delay timers
+        this.levelPassedMessageTime = 0;
+        this.postEvilWaveDelayTimer = 0;
+        this.evilWaveFullyEnded = false;
     }
 
     startGame() {
@@ -130,16 +142,15 @@ class Background {
 
     setupPipeSpawning() {
         this.pipeSpawnInterval = setInterval(() => {
-            if (this.gameStarted && !this.game.gameOver) {
+            if (this.gameStarted && !this.game.gameOver && !this.evilWaveActive && this.postEvilWaveDelayTimer <= 0) {
                 this.spawnPipePair();
             }
         }, this.pipeInterval);
     }
 
     spawnPipePair() {
-        if (!this.gameStarted || this.game.gameOver) return;
+        if (!this.gameStarted || this.game.gameOver || this.evilWaveActive || this.postEvilWaveDelayTimer > 0) return;
 
-        // Use a random opening (gap) between minOpening and maxOpening
         const opening = this.minOpening + Math.random() * (this.maxOpening - this.minOpening);
         const minTopPipeHeight = 50;
         const maxTopPipeHeight = this.baseY - opening - 100;
@@ -190,7 +201,6 @@ class Background {
                     lastFrame: -1
                 });
 
-                // Mark the top pipe as having a plant
                 topPipe.hasPlant = true;
             } else {
                 const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
@@ -211,62 +221,98 @@ class Background {
         }
 
         this.pipePairCount++;
+
+        // Check if evil wave should be triggered
+        if (!this.evilWaveTriggered && this.pipePairCount === this.EVIL_WAVE_PIPE_COUNT) {
+            this.triggerEvilWave();
+        }
     }
 
     spawnEnemyBigBird() {
         const enemyWidth = this.BIRD_WIDTH * 3;
         const enemyHeight = this.BIRD_HEIGHT * 2;
         const x = this.width;
-        let y = 100; 
-    
-        let topPipe = this.pipeArray.find(pipe => pipe.type === 'top' && Math.abs(pipe.x - this.width) < 10);
-        let bottomPipe = null;
-        if (topPipe) {
-            bottomPipe = this.pipeArray.find(pipe => pipe.type === 'bottom' && Math.abs(pipe.x - topPipe.x) < 5);
-        }
-    
-        if (topPipe && bottomPipe) {
-            const gapTop = topPipe.height;
-            const gapBottom = bottomPipe.y;
-    
-            const spaceAbove = gapTop - enemyHeight; 
-            const spaceBelow = this.baseY - enemyHeight - gapBottom;
-    
-            let possiblePositions = [];
-            if (spaceAbove > 0) possiblePositions.push('above');
-            if (spaceBelow > 0) possiblePositions.push('below');
-    
-            if (possiblePositions.length > 0) {
-                const chosenArea = possiblePositions[Math.floor(Math.random() * possiblePositions.length)];
-                if (chosenArea === 'above') {
-                    y = Math.random() * spaceAbove;
-                } else {
-                    y = gapBottom + Math.random() * spaceBelow;
-                }
-            } else {
-                y = gapTop - enemyHeight - 10;
-            }
-        } else {
-            y = Math.random() * (this.baseY - enemyHeight);
-        }
-    
+        const y = 100 + Math.random() * (this.baseY - enemyHeight - 200);
+
         let enemyBigBird = {
             x: x,
             y: y,
             width: enemyWidth,
             height: enemyHeight,
-            elapsedTime: 0 
+            elapsedTime: 0
         };
         this.enemyBigBirds.push(enemyBigBird);
+        this.dangerDisplayTime = this.DANGER_DURATION;
     }
-    
+
+    triggerEvilWave() {
+        this.evilWaveActive = true;
+        this.evilWaveTriggered = true;
+
+        // Clear existing pipes and plants
+        this.pipeArray = [];
+        this.snappingPlants = [];
+        this.coins = [];
+
+        // Stop spawning new pipes
+        clearInterval(this.pipeSpawnInterval);
+        this.pipeSpawnInterval = null;
+
+        // Spawn 4 evil birds at intervals
+        this.evilWaveBirdsSpawned = 0;
+        this.evilWaveInterval = setInterval(() => {
+            if (this.evilWaveBirdsSpawned < 4) {
+                this.spawnEnemyBigBird();
+                this.evilWaveBirdsSpawned++;
+            } else {
+                clearInterval(this.evilWaveInterval);
+            }
+        }, 1000); // Spawn a bird every 1 second
+    }
 
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
 
-        this.pipeArray.forEach(pipe => {
-            pipe.x -= this.pipeSpeed;
-        });
+        // Update danger display timer
+        if (this.dangerDisplayTime > 0) {
+            this.dangerDisplayTime -= this.game.clockTick;
+        }
+
+        // Trigger level passed message only after the full evil wave is done,
+        // there are no enemy birds left, and the danger sign has disappeared.
+        if (this.evilWaveActive &&
+            this.evilWaveBirdsSpawned === 4 &&
+            this.enemyBigBirds.length === 0 &&
+            this.dangerDisplayTime <= 0) {
+            this.evilWaveActive = false;
+            this.evilWaveFullyEnded = true; // Mark the evil wave as fully ended
+            this.levelPassedMessageTime = this.levelPassedMessageDuration; // Show "Level One Passed" message
+            this.postEvilWaveDelayTimer = this.postEvilWaveDelay; // Start the delay timer
+        }
+
+        // Update level passed message timer
+        if (this.levelPassedMessageTime > 0) {
+            this.levelPassedMessageTime -= this.game.clockTick;
+        }
+
+        // Update post-evil wave delay timer
+        if (this.postEvilWaveDelayTimer > 0) {
+            this.postEvilWaveDelayTimer -= this.game.clockTick;
+            return; // Skip the rest of the update logic during the delay
+        }
+
+        // Restart pipe spawning after the delay if the evil wave has fully ended
+        if (this.evilWaveFullyEnded && !this.pipeSpawnInterval) {
+            this.setupPipeSpawning();
+            this.evilWaveFullyEnded = false; // Reset the state
+        }
+
+        // Move pipes only if no evil wave is active
+        if (!this.evilWaveActive) {
+            this.pipeArray.forEach(pipe => {
+                pipe.x -= this.pipeSpeed;
+            });
+        }
 
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
@@ -282,14 +328,12 @@ class Background {
             this.snappingPlantFrameDuration = 0.3;
         });
 
-        // Update coins
         this.coins.forEach(coin => {
             coin.update();
         });
 
         const bird = this.getBird();
         if (bird) {
-            // Increase score for passing pipes regardless of invincibility
             this.pipeArray.forEach(pipe => {
                 if (!pipe.passed && bird.x > pipe.x + pipe.width && pipe.type === 'top') {
                     pipe.passed = true;
@@ -298,9 +342,7 @@ class Background {
                 }
             });
 
-            // Only perform collision checks if the bird is not invincible
             if (!bird.invincible) {
-                // Check collisions with pipes
                 for (const pipe of this.pipeArray) {
                     if (this.checkPipeCollision(bird, pipe)) {
                         this.playSound(this.hitSound);
@@ -321,7 +363,6 @@ class Background {
                     }
                 }
 
-                // Check collisions with snapping plants
                 for (const plant of this.snappingPlants) {
                     if (this.checkPlantCollision(bird, plant)) {
                         this.playSound(this.hitSound);
@@ -342,7 +383,6 @@ class Background {
                     }
                 }
 
-                // Check collisions with the enemy big bird(s)
                 this.enemyBigBirds.forEach(enemy => {
                     if (this.checkEnemyBigBirdCollision(bird, enemy)) {
                         this.playSound(this.hitSound);
@@ -363,17 +403,15 @@ class Background {
                 });
             }
 
-            // Check collisions with coins (always allow coin collection)
             this.coins.forEach(coin => {
                 if (!coin.collected && coin.checkCollision(bird)) {
                     coin.collected = true;
                     this.coinProgress.collectCoin();
 
-                    // --- NEW: If coin progress reaches max (3 coins), trigger invincibility ---
                     if (this.coinProgress.coinsCollected >= this.coinProgress.maxCoins) {
                         bird.invincible = true;
-                        bird.invincibleTimer = 10; // 10 seconds of invincibility
-                        this.coinProgress.reset(); // reset coin progress if desired
+                        bird.invincibleTimer = 10;
+                        this.coinProgress.reset();
                     }
                 }
             });
@@ -389,7 +427,7 @@ class Background {
         });
         this.coins = this.coins.filter(coin => !coin.collected && coin.x + 50 > 0);
 
-        // Update enemy big birds: move them left and update their animation timer
+        // Update enemy big birds
         this.enemyBigBirds.forEach(enemy => {
             enemy.x -= this.enemyBigBirdSpeed;
             enemy.elapsedTime += this.game.clockTick;
@@ -457,7 +495,6 @@ class Background {
         );
     }
 
-    // === NEW: Collision check for the enemy big bird ===
     checkEnemyBigBirdCollision(bird, enemy) {
         const birdLeft = bird.x + this.BIRD_X_OFFSET;
         const birdRight = birdLeft + this.BIRD_WIDTH;
@@ -518,8 +555,8 @@ class Background {
             );
         });
 
-        const frameWidth = 250; // Adjusted frame width for enemy bird
-        const frameHeight = 202; // Frame height remains the same
+        const frameWidth = 250;
+        const frameHeight = 202;
         this.enemyBigBirds.forEach(enemy => {
             const frameIndex = Math.floor(enemy.elapsedTime / this.enemyBigBirdFrameDuration) % this.enemyBigBirdFrameCount;
             ctx.drawImage(
@@ -532,10 +569,54 @@ class Background {
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
         this.coinProgress.draw(ctx);
 
+        // Draw danger warning if active
+        if (this.dangerDisplayTime > 0 && !this.game.gameOver && this.gameStarted) {
+            const alpha = Math.min(1, this.dangerDisplayTime * 2); // Fade out
+            const pulse = Math.sin(Date.now() / 100) * 0.3 + 1; // Pulsing scale
+
+            ctx.save();
+            ctx.translate(this.width / 2, this.height / 3); // Center horizontally, 1/3 from top
+            ctx.scale(pulse, pulse);
+
+            ctx.fillStyle = `rgba(255, 50, 50, ${alpha})`;
+            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.lineWidth = 4;
+            ctx.font = '60px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            ctx.strokeText('DANGER!', 0, 0);
+            ctx.fillText('DANGER!', 0, 0);
+
+            ctx.restore();
+        }
+
+        // Draw "Level One Passed" message only when the evil wave has fully ended
+        if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted && this.evilWaveFullyEnded) {
+            const alpha = Math.min(1, this.levelPassedMessageTime * 2); // Fade out
+            const pulse = Math.sin(Date.now() / 100) * 0.3 + 1; // Pulsing scale
+
+            ctx.save();
+            ctx.translate(this.width / 2, this.height / 3); // Center horizontally, 1/3 from top
+            ctx.scale(pulse, pulse);
+
+            ctx.fillStyle = `rgba(50, 255, 50, ${alpha})`; // Green color for success
+            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.lineWidth = 4;
+            ctx.font = '60px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            ctx.strokeText('LEVEL ONE PASSED!', 0, 0);
+            ctx.fillText('LEVEL ONE PASSED!', 0, 0);
+
+            ctx.restore();
+        }
+
         if (this.game.gameOver) {
             const colors = this.coinProgress.colors;
-            const panelWidth = 180; 
-            const panelHeight = 160; 
+            const panelWidth = 180;
+            const panelHeight = 160;
             const panelX = (this.width - panelWidth) / 2;
             const panelY = (this.height - panelHeight) / 2 - 50;
 
@@ -556,32 +637,32 @@ class Background {
             ctx.fill();
             ctx.stroke();
 
-            ctx.font = '18px "Press Start 2P", monospace'; 
+            ctx.font = '18px "Press Start 2P", monospace';
             ctx.fillStyle = colors.title.main;
             ctx.textAlign = 'center';
             ctx.fillText('GAME OVER', panelX + panelWidth / 2, panelY + 30);
 
-            ctx.font = '16px "Press Start 2P", monospace'; 
+            ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.title.main;
             ctx.fillText('SCORE', panelX + panelWidth / 2, panelY + 60);
 
             ctx.fillStyle = colors.text;
-            ctx.font = '20px "Press Start 2P", monospace'; 
+            ctx.font = '20px "Press Start 2P", monospace';
             ctx.fillText(this.getBird()?.score.toString() || '0', panelX + panelWidth / 2, panelY + 90);
 
-            ctx.font = '16px "Press Start 2P", monospace'; 
+            ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.title.main;
             ctx.fillText('BEST', panelX + panelWidth / 2, panelY + 120);
 
             ctx.fillStyle = colors.text;
-            ctx.font = '20px "Press Start 2P", monospace'; 
+            ctx.font = '20px "Press Start 2P", monospace';
             const bestScore = localStorage.getItem('bestScore') || '0';
             ctx.fillText(bestScore, panelX + panelWidth / 2, panelY + 150);
 
-            const btnWidth = 120; 
-            const btnHeight = 40; 
+            const btnWidth = 120;
+            const btnHeight = 40;
             const btnX = (this.width - btnWidth) / 2;
-            const btnY = panelY + panelHeight + 10; 
+            const btnY = panelY + panelHeight + 10;
 
             ctx.fillStyle = colors.fill.start;
             ctx.strokeStyle = colors.border;
@@ -600,7 +681,7 @@ class Background {
             ctx.fill();
             ctx.stroke();
 
-            ctx.font = '16px "Press Start 2P", monospace'; 
+            ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.text;
             ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
 
@@ -626,7 +707,7 @@ class Background {
             ctx.fill();
             ctx.stroke();
 
-            ctx.font = '16px "Press Start 2P", monospace'; 
+            ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.text;
             ctx.fillText('RETURN TO MENU', returnBtnX + returnBtnWidth / 2, returnBtnY + returnBtnHeight / 2 + 8);
 
