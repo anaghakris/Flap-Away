@@ -89,6 +89,11 @@ class Bird {
         this.powerUpAnimation.active = true;
         this.powerUpAnimation.timer = 0;
         
+        if (this.powerSoundLoop) {
+            this.powerSoundLoop.pause();
+            this.powerSoundLoop = null;
+        }
+        
         if (this.powerUpSound) {
             this.powerSoundLoop = this.powerUpSound.cloneNode();
             this.powerSoundLoop.volume = 0.3;
