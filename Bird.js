@@ -207,22 +207,30 @@ class Bird {
             this.game.gameOver = true;
         }
     }
-
     draw(ctx) {
         if (this.powerUpAnimation.active) {
             this.drawPowerUpAnimation(ctx);
         }
-
+    
         if (this.invincible) {
             this.drawPowerBoostEffects(ctx);
         }
-
+    
         ctx.save();
         ctx.translate(this.x + 34 / 2, this.y + 70 / 2);
         ctx.rotate(this.rotation);
         ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2));
         const scale = 0.6;
-
+    
+        const centerX = this.x + (34 * scale);  
+        const centerY = this.y + (35 * scale); 
+        const radius = 15; 
+    
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(147, 0, 255, 0.3)'; 
+        ctx.stroke();
+    
         if (this.isFlapping) {
             if (this.invincible) {
                 ctx.shadowColor = `hsla(${this.invincibleEffects.rainbowHue}, 100%, 50%, 0.8)`;
@@ -243,13 +251,14 @@ class Bird {
         }
         ctx.restore();
 
+    
         ctx.font = "30px Arial";
         ctx.fillStyle = "white";
         ctx.strokeStyle = "black";
         ctx.lineWidth = 3;
         ctx.strokeText(this.score.toString(), 400, 50);
         ctx.fillText(this.score.toString(), 400, 50);
-
+    
         if (this.invincible) {
             ctx.font = "20px Arial";
             ctx.fillStyle = "white";
