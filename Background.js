@@ -341,67 +341,67 @@ class Background {
                     this.playSound(this.pointSound);
                 }
             });
-
-            if (!bird.invincible) {
-                for (const pipe of this.pipeArray) {
-                    if (this.checkPipeCollision(bird, pipe)) {
-                        this.playSound(this.hitSound);
-                        if (this.swooshSound) {
-                            this.swooshSound.currentTime = 0;
-                            this.swooshSound.play();
-                        }
-                        this.game.gameOver = true;
-                        this.game.hasCollided = true;
-                        bird.velocity = 0;
-                        bird.rotation = bird.maxRotationDown;
-                        const currentScore = bird.score;
-                        const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                        if (currentScore > bestScore) {
-                            localStorage.setItem('bestScore', currentScore.toString());
-                        }
-                        break;
+    
+        if (!bird.invincible) {
+            for (const pipe of this.pipeArray) {
+                if (this.checkPipeCollision(bird, pipe)) {
+                    this.playSound(this.hitSound);
+                    if (this.swooshSound) {
+                        this.swooshSound.currentTime = 0;
+                        this.swooshSound.play();
                     }
+                    this.game.gameOver = true;
+                    this.game.hasCollided = true;
+                    bird.velocity = 0;
+                    bird.rotation = bird.maxRotationDown;
+                    const currentScore = bird.score;
+                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                    if (currentScore > bestScore) {
+                        localStorage.setItem('bestScore', currentScore.toString());
+                    }
+                    break;
                 }
-
-                for (const plant of this.snappingPlants) {
-                    if (this.checkPlantCollision(bird, plant)) {
-                        this.playSound(this.hitSound);
-                        if (this.swooshSound) {
-                            this.swooshSound.currentTime = 0;
-                            this.swooshSound.play();
-                        }
-                        this.game.gameOver = true;
-                        this.game.hasCollided = true;
-                        bird.velocity = 0;
-                        bird.rotation = bird.maxRotationDown;
-                        const currentScore = bird.score;
-                        const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                        if (currentScore > bestScore) {
-                            localStorage.setItem('bestScore', currentScore.toString());
-                        }
-                        break;
-                    }
-                }
-
-                this.enemyBigBirds.forEach(enemy => {
-                    if (this.checkEnemyBigBirdCollision(bird, enemy)) {
-                        this.playSound(this.hitSound);
-                        if (this.swooshSound) {
-                            this.swooshSound.currentTime = 0;
-                            this.swooshSound.play();
-                        }
-                        this.game.gameOver = true;
-                        this.game.hasCollided = true;
-                        bird.velocity = 0;
-                        bird.rotation = bird.maxRotationDown;
-                        const currentScore = bird.score;
-                        const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                        if (currentScore > bestScore) {
-                            localStorage.setItem('bestScore', currentScore.toString());
-                        }
-                    }
-                });
             }
+    
+            for (const plant of this.snappingPlants) {
+                if (this.checkPlantCollision(bird, plant)) {
+                    this.playSound(this.hitSound);
+                    if (this.swooshSound) {
+                        this.swooshSound.currentTime = 0;
+                        this.swooshSound.play();
+                     }
+                    this.game.gameOver = true;
+                    this.game.hasCollided = true;
+                    bird.velocity = 0;
+                    bird.rotation = bird.maxRotationDown;
+                    const currentScore = bird.score;
+                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                    if (currentScore > bestScore) {
+                        localStorage.setItem('bestScore', currentScore.toString());
+                    }
+                    break;
+                }
+            }
+
+            this.enemyBigBirds.forEach(enemy => {
+                if (this.checkEnemyBigBirdCollision(bird, enemy)) {
+                    this.playSound(this.hitSound);
+                    if (this.swooshSound) {
+                        this.swooshSound.currentTime = 0;
+                        this.swooshSound.play();
+                    }
+                    this.game.gameOver = true;
+                    this.game.hasCollided = true;
+                    bird.velocity = 0;
+                    bird.rotation = bird.maxRotationDown;
+                    const currentScore = bird.score;
+                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                    if (currentScore > bestScore) {
+                        localStorage.setItem('bestScore', currentScore.toString());
+                    }
+                }
+            });
+        }
 
             this.coins.forEach(coin => {
                 if (!coin.collected && coin.checkCollision(bird)) {
@@ -444,12 +444,12 @@ class Background {
         const birdRight = birdLeft + this.BIRD_WIDTH;
         const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
         const birdBottom = birdTop + this.BIRD_HEIGHT;
-
+    
         const pipeLeft = pipe.x + this.PIPE_HORIZONTAL_PADDING;
         const pipeRight = pipe.x + pipe.width - this.PIPE_HORIZONTAL_PADDING;
         const pipeTop = pipe.y + (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : 0);
         const pipeBottom = pipe.y + pipe.height - (pipe.type === 'top' ? 0 : this.PIPE_VERTICAL_PADDING);
-
+    
         return (
             birdRight > pipeLeft &&
             birdLeft < pipeRight &&
@@ -460,23 +460,23 @@ class Background {
 
     checkPlantCollision(bird, plant) {
         if (plant.elapsedTime < 0) return false;
-
+    
         const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
         plant.state = (frame >= 2 && frame <= 4) ? "SNAPPING" : "IDLE";
         const collisionFactors = this.PLANT_COLLISION_STATES[plant.state];
-
+    
         const birdLeft = bird.x + this.BIRD_X_OFFSET;
         const birdRight = birdLeft + this.BIRD_WIDTH;
         const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
         const birdBottom = birdTop + this.BIRD_HEIGHT;
-
+    
         const plantScale = this.snappingPlantScale;
         const collisionWidth = this.snappingPlantFrameWidth * plantScale * collisionFactors.widthFactor;
         const collisionHeight = this.snappingPlantFrameHeight * plantScale * collisionFactors.heightFactor;
-
+    
         let plantCollisionX = plant.x + (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
         let plantCollisionY;
-
+    
         if (plant.type === "top") {
             if (plant.state === "SNAPPING") {
                 plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale;
@@ -486,7 +486,7 @@ class Background {
         } else {
             plantCollisionY = plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * (plant.state === "SNAPPING" ? 0.9 : 0.8);
         }
-
+    
         return (
             birdRight > plantCollisionX &&
             birdLeft < plantCollisionX + collisionWidth &&
@@ -515,8 +515,10 @@ class Background {
     }
 
     draw(ctx) {
+        // Draw the background
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
-
+    
+        // Draw pipes
         this.pipeArray.forEach(pipe => {
             if (pipe.type === 'top') {
                 ctx.save();
@@ -535,14 +537,27 @@ class Background {
                     pipe.x, pipe.y, pipe.width, pipe.height
                 );
             }
+    
+            // Debug: Draw collision boxes for pipes
+            ctx.strokeStyle = 'red';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(
+                pipe.x + this.PIPE_HORIZONTAL_PADDING,
+                pipe.y + (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : 0),
+                pipe.width - 2 * this.PIPE_HORIZONTAL_PADDING,
+                pipe.height - (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : 0)
+            );
         });
-
+    
+        // Draw coins
         this.coins.forEach(coin => {
             coin.draw(ctx);
         });
-
+    
+        // Draw snapping plants
         this.snappingPlants.forEach(plant => {
             if (plant.elapsedTime < 0) return;
+    
             const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
             const sprite = plant.type === "bottom" ? this.snappingPlantSprite : this.snappingPlantTop;
             ctx.drawImage(
@@ -553,8 +568,34 @@ class Background {
                 this.snappingPlantFrameWidth * this.snappingPlantScale,
                 this.snappingPlantFrameHeight * this.snappingPlantScale
             );
+    
+            // Debug: Draw collision boxes for snapping plants
+            plant.state = (frame >= 2 && frame <= 4) ? "SNAPPING" : "IDLE";
+            const collisionFactors = this.PLANT_COLLISION_STATES[plant.state];
+    
+            const plantScale = this.snappingPlantScale;
+            const collisionWidth = this.snappingPlantFrameWidth * plantScale * collisionFactors.widthFactor;
+            const collisionHeight = this.snappingPlantFrameHeight * plantScale * collisionFactors.heightFactor;
+    
+            let plantCollisionX = plant.x + (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
+            let plantCollisionY;
+    
+            if (plant.type === "top") {
+                if (plant.state === "SNAPPING") {
+                    plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale;
+                } else {
+                    plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale - collisionHeight;
+                }
+            } else {
+                plantCollisionY = plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * (plant.state === "SNAPPING" ? 0.9 : 0.8);
+            }
+    
+            ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(plantCollisionX, plantCollisionY, collisionWidth, collisionHeight);
         });
-
+    
+        // Draw enemy big birds
         const frameWidth = 250;
         const frameHeight = 202;
         this.enemyBigBirds.forEach(enemy => {
@@ -565,61 +606,65 @@ class Background {
                 enemy.x, enemy.y, enemy.width, enemy.height
             );
         });
-
+    
+        // Draw the base (ground)
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
+    
+        // Draw the coin progress bar
         this.coinProgress.draw(ctx);
-
+    
         // Draw danger warning if active
         if (this.dangerDisplayTime > 0 && !this.game.gameOver && this.gameStarted) {
             const alpha = Math.min(1, this.dangerDisplayTime * 2); // Fade out
             const pulse = Math.sin(Date.now() / 100) * 0.3 + 1; // Pulsing scale
-
+    
             ctx.save();
             ctx.translate(this.width / 2, this.height / 3); // Center horizontally, 1/3 from top
             ctx.scale(pulse, pulse);
-
+    
             ctx.fillStyle = `rgba(255, 50, 50, ${alpha})`;
             ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
             ctx.lineWidth = 4;
             ctx.font = '60px "Press Start 2P"';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-
+    
             ctx.strokeText('DANGER!', 0, 0);
             ctx.fillText('DANGER!', 0, 0);
-
+    
             ctx.restore();
         }
-
+    
         // Draw "Level One Passed" message only when the evil wave has fully ended
         if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted && this.evilWaveFullyEnded) {
             const alpha = Math.min(1, this.levelPassedMessageTime * 2); // Fade out
             const pulse = Math.sin(Date.now() / 100) * 0.3 + 1; // Pulsing scale
-
+    
             ctx.save();
             ctx.translate(this.width / 2, this.height / 3); // Center horizontally, 1/3 from top
             ctx.scale(pulse, pulse);
-
+    
             ctx.fillStyle = `rgba(50, 255, 50, ${alpha})`; // Green color for success
             ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
             ctx.lineWidth = 4;
             ctx.font = '60px "Press Start 2P"';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-
+    
             ctx.strokeText('LEVEL ONE PASSED!', 0, 0);
             ctx.fillText('LEVEL ONE PASSED!', 0, 0);
-
+    
             ctx.restore();
         }
-
+    
+        // Draw game over screen
         if (this.game.gameOver) {
             const colors = this.coinProgress.colors;
             const panelWidth = 180;
             const panelHeight = 160;
             const panelX = (this.width - panelWidth) / 2;
             const panelY = (this.height - panelHeight) / 2 - 50;
-
+    
             ctx.fillStyle = colors.background;
             ctx.strokeStyle = colors.border;
             ctx.lineWidth = 4;
@@ -636,34 +681,34 @@ class Background {
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
-
+    
             ctx.font = '18px "Press Start 2P", monospace';
             ctx.fillStyle = colors.title.main;
             ctx.textAlign = 'center';
             ctx.fillText('GAME OVER', panelX + panelWidth / 2, panelY + 30);
-
+    
             ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.title.main;
             ctx.fillText('SCORE', panelX + panelWidth / 2, panelY + 60);
-
+    
             ctx.fillStyle = colors.text;
             ctx.font = '20px "Press Start 2P", monospace';
             ctx.fillText(this.getBird()?.score.toString() || '0', panelX + panelWidth / 2, panelY + 90);
-
+    
             ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.title.main;
             ctx.fillText('BEST', panelX + panelWidth / 2, panelY + 120);
-
+    
             ctx.fillStyle = colors.text;
             ctx.font = '20px "Press Start 2P", monospace';
             const bestScore = localStorage.getItem('bestScore') || '0';
             ctx.fillText(bestScore, panelX + panelWidth / 2, panelY + 150);
-
+    
             const btnWidth = 120;
             const btnHeight = 40;
             const btnX = (this.width - btnWidth) / 2;
             const btnY = panelY + panelHeight + 10;
-
+    
             ctx.fillStyle = colors.fill.start;
             ctx.strokeStyle = colors.border;
             ctx.lineWidth = 4;
@@ -680,16 +725,16 @@ class Background {
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
-
+    
             ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.text;
             ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
-
+    
             const returnBtnWidth = 240;
             const returnBtnHeight = 40;
             const returnBtnX = (this.width - returnBtnWidth) / 2;
             const returnBtnY = btnY + btnHeight + 10;
-
+    
             ctx.fillStyle = colors.fill.start;
             ctx.strokeStyle = colors.border;
             ctx.lineWidth = 4;
@@ -706,11 +751,11 @@ class Background {
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
-
+    
             ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.text;
             ctx.fillText('RETURN TO MENU', returnBtnX + returnBtnWidth / 2, returnBtnY + returnBtnHeight / 2 + 8);
-
+    
         } else if (!this.gameStarted) {
             ctx.font = "24px Arial";
             ctx.fillStyle = "white";
