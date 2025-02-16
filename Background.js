@@ -41,8 +41,8 @@ class Background {
         this.pipeSpacing = 200;
         this.pipeInterval = 2000;
 
-        this.minOpening = 150;
-        this.maxOpening = 200;
+        this.minOpening = 120;
+        this.maxOpening = 160;
 
         this.snappingPlantFrameWidth = 158;
         this.snappingPlantFrameHeight = 250;
