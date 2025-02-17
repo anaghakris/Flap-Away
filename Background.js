@@ -2,6 +2,7 @@ class Background {
     constructor(game) {
         this.game = game;
         this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
+        //this.image1 = ASSET_MANAGER.getAsset("./Sprites/Background/Night.png");
         this.coin = ASSET_MANAGER.getAsset("./Sprites/Background/coin.png");
         this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
@@ -24,6 +25,8 @@ class Background {
         this.swooshSound = ASSET_MANAGER.getAsset("./audio/sfx_swooshing.wav");
         this.hasCollided = false;
 
+        //this.levelOnePassed = false;
+
         this.lastSoundTime = 0;
         this.MIN_SOUND_INTERVAL = 150;
 
@@ -41,8 +44,8 @@ class Background {
         this.pipeSpacing = 200;
         this.pipeInterval = 2000;
 
-        this.minOpening = 120;
-        this.maxOpening = 160;
+        this.minOpening = 120; // 120
+        this.maxOpening = 160; // 160
 
         this.snappingPlantFrameWidth = 158;
         this.snappingPlantFrameHeight = 250;
@@ -139,7 +142,6 @@ class Background {
             }
         });
     }
-
     setupPipeSpawning() {
         this.pipeSpawnInterval = setInterval(() => {
             if (this.gameStarted && !this.game.gameOver && !this.evilWaveActive && this.postEvilWaveDelayTimer <= 0) {
@@ -341,6 +343,14 @@ class Background {
                     this.playSound(this.pointSound);
                 }
             });
+
+            const updateBestScore = () => {
+                const currentScore = bird.score;
+                const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                if (currentScore > bestScore) {
+                    localStorage.setItem('bestScore', currentScore.toString());
+                }
+            };
     
         if (!bird.invincible) {
             for (const pipe of this.pipeArray) {
@@ -354,11 +364,12 @@ class Background {
                     this.game.hasCollided = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
-                    const currentScore = bird.score;
-                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                    if (currentScore > bestScore) {
-                        localStorage.setItem('bestScore', currentScore.toString());
-                    }
+                    updateBestScore();
+                    // const currentScore = bird.score;
+                    // const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                    // if (currentScore > bestScore) {
+                    //     localStorage.setItem('bestScore', currentScore.toString());
+                    // }
                     break;
                 }
             }
@@ -374,11 +385,12 @@ class Background {
                     this.game.hasCollided = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
-                    const currentScore = bird.score;
-                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                    if (currentScore > bestScore) {
-                        localStorage.setItem('bestScore', currentScore.toString());
-                    }
+                    updateBestScore();
+                    // const currentScore = bird.score;
+                    // const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                    // if (currentScore > bestScore) {
+                    //     localStorage.setItem('bestScore', currentScore.toString());
+                    // }
                     break;
                 }
             }
@@ -394,14 +406,17 @@ class Background {
                     this.game.hasCollided = true;
                     bird.velocity = 0;
                     bird.rotation = bird.maxRotationDown;
-                    const currentScore = bird.score;
-                    const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                    if (currentScore > bestScore) {
-                        localStorage.setItem('bestScore', currentScore.toString());
-                    }
+                    updateBestScore();
+                    // const currentScore = bird.score;
+                    // const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
+                    // if (currentScore > bestScore) {
+                    //     localStorage.setItem('bestScore', currentScore.toString());
+                    // }
                 }
             });
+
         }
+        updateBestScore();
 
             this.coins.forEach(coin => {
                 if (!coin.collected && coin.checkCollision(bird)) {
@@ -515,8 +530,18 @@ class Background {
     }
 
     draw(ctx) {
-        // Draw the background
+        // Draw the day background
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
+
+        // For night background
+        // if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted && this.evilWaveFullyEnded) {
+        //     this.levelOnePassed = true;
+        // }
+        // if (this.levelOnePassed) {
+        //     ctx.drawImage(this.image1, 0, 0, this.width, this.height); 
+        // } else {
+        //     ctx.drawImage(this.image, 0, 0, this.width, this.height); 
+        // }
     
         // Draw pipes
         this.pipeArray.forEach(pipe => {
