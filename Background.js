@@ -162,13 +162,16 @@ class Background {
     }
 
     spawnPipePair() {
-        if (!this.gameStarted || this.game.gameOver || this.evilWaveActive || this.postEvilWaveDelayTimer > 0) return;
-
+        if (!this.gameStarted || this.game.gameOver || this.evilWaveActive || this.postEvilWaveDelayTimer > 0)
+            return;
+    
+        // Calculate the opening between pipes as usual
         const opening = this.minOpening + Math.random() * (this.maxOpening - this.minOpening);
         const minTopPipeHeight = 50;
         const maxTopPipeHeight = this.baseY - opening - 100;
         const topPipeHeight = minTopPipeHeight + Math.random() * (maxTopPipeHeight - minTopPipeHeight);
-
+    
+        // Create the top and bottom pipes (even in level 2 we still create them)
         const topPipe = {
             x: this.width,
             y: 0,
@@ -177,7 +180,7 @@ class Background {
             type: 'top',
             passed: false
         };
-
+    
         const bottomPipe = {
             x: this.width,
             y: topPipeHeight + opening,
@@ -186,22 +189,25 @@ class Background {
             type: 'bottom',
             passed: false
         };
-
+    
         this.pipeArray.push(topPipe, bottomPipe);
-
+    
+        // Add a coin as usual
         const minDistanceFromPipe = 100;
         const coinX = topPipe.x + this.pipeWidth + minDistanceFromPipe + Math.random() * this.pipeWidth;
         const maxY = this.baseY - 50;
         const minY = 50;
         const coinY = minY + Math.random() * (maxY - minY);
-
         this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed, this.coinSound));
-
-        if (this.pipePairCount % 2 === 0) {
-            const addTopPlant = Math.random() < 0.5;
-            if (addTopPlant) {
-                const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
+    
+        // Now decide snapping plant based on current level
+        if (this.level === 2) {
+            // Randomly choose top or bottom snapping plant
+            const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
+            if (Math.random() < 0.5) {
+                // Top snapping plant
                 const topPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
+                // Adjust top plant Y so that it appears attached to the top pipe.
                 const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 20;
                 this.snappingPlants.push({
                     x: topPlantX,
@@ -213,7 +219,7 @@ class Background {
                 });
                 topPipe.hasPlant = true;
             } else {
-                const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
+                // Bottom snapping plant
                 const bottomPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
                 const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
                 this.snappingPlants.push({
@@ -226,14 +232,47 @@ class Background {
                 });
                 bottomPipe.hasPlant = true;
             }
+        } else {
+            // Level 1 logic (randomly attach plant to top or bottom)
+            if (this.pipePairCount % 2 === 0) {
+                const addTopPlant = Math.random() < 0.5;
+                if (addTopPlant) {
+                    const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
+                    const topPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
+                    const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 20;
+                    this.snappingPlants.push({
+                        x: topPlantX,
+                        y: topPlantY,
+                        elapsedTime: 0,
+                        type: "top",
+                        state: "IDLE",
+                        lastFrame: -1
+                    });
+                    topPipe.hasPlant = true;
+                } else {
+                    const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
+                    const bottomPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
+                    const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
+                    this.snappingPlants.push({
+                        x: bottomPlantX,
+                        y: bottomPlantY,
+                        elapsedTime: 0,
+                        type: "bottom",
+                        state: "IDLE",
+                        lastFrame: -1
+                    });
+                    bottomPipe.hasPlant = true;
+                }
+            }
         }
-
+    
         this.pipePairCount++;
-
+    
         if (!this.evilWaveTriggered && this.pipePairCount === this.EVIL_WAVE_PIPE_COUNT) {
             this.triggerEvilWave();
         }
     }
+    
 
     spawnEnemyBigBird() {
         const enemyWidth = this.BIRD_WIDTH * 3;
