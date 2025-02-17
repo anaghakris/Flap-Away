@@ -1,11 +1,16 @@
 class Background {
     constructor(game) {
         this.game = game;
+        // Level indicator: 1 = level one, 2 = level two
+        this.level = 1;
+
+        // Level 1 assets
         this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
-        this.coin = ASSET_MANAGER.getAsset("./Sprites/Background/coin.png");
         this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
         this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
+        this.coin = ASSET_MANAGER.getAsset("./Sprites/Background/coin.png");
+        
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
 
@@ -38,9 +43,10 @@ class Background {
         this.pipeSpacing = 200;
         this.pipeInterval = 2000;
 
-        this.minOpening = 140; 
-        this.maxOpening = 200; 
+        this.minOpening = 140;
+        this.maxOpening = 200;
 
+        // Snapping plant properties
         this.snappingPlantFrameWidth = 158;
         this.snappingPlantFrameHeight = 250;
         this.snappingPlantTopFrameHeight = 90;
@@ -86,6 +92,10 @@ class Background {
         this.postEvilWaveDelayTimer = 0;
         this.evilWaveFullyEnded = false;
 
+        // Flash timer for the level transition effect
+        this.flashTimer = 0;
+        this.FLASH_DURATION = 1.0; // seconds
+
         // Initialize ScoreManager
         this.scoreManager = new ScoreManager(this.game);
     }
@@ -100,6 +110,14 @@ class Background {
     }
 
     reset() {
+        // Force the game back to level 1 and load Level 1 assets
+        this.level = 1;
+        this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
+        this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
+        this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
+        this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
+
+        // Clear existing entities and reset game progression
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
@@ -172,7 +190,7 @@ class Background {
         this.pipeArray.push(topPipe, bottomPipe);
 
         const minDistanceFromPipe = 100;
-        const coinX = topPipe.x + this.pipeWidth + minDistanceFromPipe + Math.random() * (this.pipeWidth);
+        const coinX = topPipe.x + this.pipeWidth + minDistanceFromPipe + Math.random() * this.pipeWidth;
         const maxY = this.baseY - 50;
         const minY = 50;
         const coinY = minY + Math.random() * (maxY - minY);
@@ -181,12 +199,10 @@ class Background {
 
         if (this.pipePairCount % 2 === 0) {
             const addTopPlant = Math.random() < 0.5;
-
             if (addTopPlant) {
                 const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
                 const topPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
                 const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 20;
-
                 this.snappingPlants.push({
                     x: topPlantX,
                     y: topPlantY,
@@ -195,13 +211,11 @@ class Background {
                     state: "IDLE",
                     lastFrame: -1
                 });
-
                 topPipe.hasPlant = true;
             } else {
                 const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
                 const bottomPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
                 const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
-
                 this.snappingPlants.push({
                     x: bottomPlantX,
                     y: bottomPlantY,
@@ -210,7 +224,6 @@ class Background {
                     state: "IDLE",
                     lastFrame: -1
                 });
-
                 bottomPipe.hasPlant = true;
             }
         }
@@ -227,7 +240,6 @@ class Background {
         const enemyHeight = this.BIRD_HEIGHT * 2;
         const x = this.width;
         const y = 100 + Math.random() * (this.baseY - enemyHeight - 200);
-
         let enemyBigBird = {
             x: x,
             y: y,
@@ -242,14 +254,11 @@ class Background {
     triggerEvilWave() {
         this.evilWaveActive = true;
         this.evilWaveTriggered = true;
-
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
-
         clearInterval(this.pipeSpawnInterval);
         this.pipeSpawnInterval = null;
-
         this.evilWaveBirdsSpawned = 0;
         this.evilWaveInterval = setInterval(() => {
             if (this.evilWaveBirdsSpawned < 4) {
@@ -274,12 +283,29 @@ class Background {
             this.dangerDisplayTime <= 0) {
             this.evilWaveActive = false;
             this.evilWaveFullyEnded = true;
-            this.levelPassedMessageTime = this.levelPassedMessageDuration;
+            if (this.level === 1) {
+                this.levelPassedMessageTime = this.levelPassedMessageDuration;
+            }
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
 
         if (this.levelPassedMessageTime > 0) {
             this.levelPassedMessageTime -= this.game.clockTick;
+            if (this.levelPassedMessageTime <= 0 && this.level === 1) {
+                // Start white flash for level transition
+                this.flashTimer = this.FLASH_DURATION;
+            }
+        }
+
+        // Flash timer check for transition
+        if (this.flashTimer > 0) {
+            this.flashTimer -= this.game.clockTick;
+            if (this.flashTimer <= 0 && this.level === 1) {
+                console.log("Transitioning to Level 2");
+                this.transitionToLevel2();
+            }
+            // Skip the rest of update while flashing
+            return;
         }
 
         if (this.postEvilWaveDelayTimer > 0) {
@@ -287,9 +313,8 @@ class Background {
             return;
         }
 
-        if (this.evilWaveFullyEnded && !this.pipeSpawnInterval) {
+        if (!this.evilWaveActive && !this.pipeSpawnInterval) {
             this.setupPipeSpawning();
-            this.evilWaveFullyEnded = false;
         }
 
         if (!this.evilWaveActive) {
@@ -309,7 +334,6 @@ class Background {
             if (frame === this.snappingPlantFrameCount - 1) {
                 plant.elapsedTime = 0;
             }
-            this.snappingPlantFrameDuration = 0.3;
         });
 
         this.coins.forEach(coin => {
@@ -329,14 +353,12 @@ class Background {
                         break;
                     }
                 }
-
                 for (const plant of this.snappingPlants) {
                     if (this.checkPlantCollision(bird, plant)) {
                         this.handleCollision(bird);
                         break;
                     }
                 }
-
                 this.enemyBigBirds.forEach(enemy => {
                     if (this.checkEnemyBigBirdCollision(bird, enemy)) {
                         this.handleCollision(bird);
@@ -348,7 +370,6 @@ class Background {
                 if (!coin.collected && coin.checkCollision(bird)) {
                     coin.collected = true;
                     this.coinProgress.collectCoin();
-
                     if (this.coinProgress.coinsCollected >= this.coinProgress.maxCoins) {
                         bird.invincible = true;
                         bird.invincibleTimer = 10;
@@ -361,8 +382,7 @@ class Background {
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
         this.snappingPlants = this.snappingPlants.filter(plant => {
             const isOnScreen = plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0;
-            const hasCompletedAnimation = plant.elapsedTime >= 0 &&
-                plant.elapsedTime > this.snappingPlantFrameDuration * this.snappingPlantFrameCount;
+            const hasCompletedAnimation = plant.elapsedTime >= this.snappingPlantFrameDuration * this.snappingPlantFrameCount;
             return isOnScreen && !hasCompletedAnimation;
         });
         this.coins = this.coins.filter(coin => !coin.collected && coin.x + 50 > 0);
@@ -372,6 +392,31 @@ class Background {
             enemy.elapsedTime += this.game.clockTick;
         });
         this.enemyBigBirds = this.enemyBigBirds.filter(enemy => enemy.x + enemy.width > 0);
+    }
+
+    transitionToLevel2() {
+        this.level = 2;
+        // Clear existing entities
+        this.pipeArray = [];
+        this.snappingPlants = [];
+        this.coins = [];
+        this.enemyBigBirds = [];
+
+        // Load Level 2 assets
+        // (Note: Make sure these paths match your folder structure)
+        this.image = ASSET_MANAGER.getAsset("./Sprites/Background/NightCity.png");
+        this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base_night.png");
+        this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
+        this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
+
+        // Reset game progression
+        this.pipePairCount = 0;
+        this.evilWaveTriggered = false;  // Allow evil wave to trigger again
+
+        // Restart pipe spawning if needed
+        if (!this.pipeSpawnInterval) {
+            this.setupPipeSpawning();
+        }
     }
 
     handleCollision(bird) {
@@ -396,12 +441,12 @@ class Background {
         const birdRight = birdLeft + this.BIRD_WIDTH;
         const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
         const birdBottom = birdTop + this.BIRD_HEIGHT;
-    
+
         const pipeLeft = pipe.x + this.PIPE_HORIZONTAL_PADDING;
         const pipeRight = pipe.x + pipe.width - this.PIPE_HORIZONTAL_PADDING;
         const pipeTop = pipe.y + (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : 0);
         const pipeBottom = pipe.y + pipe.height - (pipe.type === 'top' ? 0 : this.PIPE_VERTICAL_PADDING);
-    
+
         return (
             birdRight > pipeLeft &&
             birdLeft < pipeRight &&
@@ -412,23 +457,23 @@ class Background {
 
     checkPlantCollision(bird, plant) {
         if (plant.elapsedTime < 0) return false;
-    
+
         const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
         plant.state = (frame >= 2 && frame <= 4) ? "SNAPPING" : "IDLE";
         const collisionFactors = this.PLANT_COLLISION_STATES[plant.state];
-    
+
         const birdLeft = bird.x + this.BIRD_X_OFFSET;
         const birdRight = birdLeft + this.BIRD_WIDTH;
         const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
         const birdBottom = birdTop + this.BIRD_HEIGHT;
-    
+
         const plantScale = this.snappingPlantScale;
         const collisionWidth = this.snappingPlantFrameWidth * plantScale * collisionFactors.widthFactor;
         const collisionHeight = this.snappingPlantFrameHeight * plantScale * collisionFactors.heightFactor;
-    
+
         let plantCollisionX = plant.x + (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
         let plantCollisionY;
-    
+
         if (plant.type === "top") {
             if (plant.state === "SNAPPING") {
                 plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale;
@@ -438,7 +483,7 @@ class Background {
         } else {
             plantCollisionY = plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * (plant.state === "SNAPPING" ? 0.9 : 0.8);
         }
-    
+
         return (
             birdRight > plantCollisionX &&
             birdLeft < plantCollisionX + collisionWidth &&
@@ -467,8 +512,10 @@ class Background {
     }
 
     draw(ctx) {
+        // Draw background image
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
-    
+
+        // Draw pipes
         this.pipeArray.forEach(pipe => {
             if (pipe.type === 'top') {
                 ctx.save();
@@ -488,14 +535,15 @@ class Background {
                 );
             }
         });
-    
+
+        // Draw coins
         this.coins.forEach(coin => {
             coin.draw(ctx);
         });
-    
+
+        // Draw snapping plants
         this.snappingPlants.forEach(plant => {
             if (plant.elapsedTime < 0) return;
-    
             const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
             const sprite = plant.type === "bottom" ? this.snappingPlantSprite : this.snappingPlantTop;
             ctx.drawImage(
@@ -507,7 +555,8 @@ class Background {
                 this.snappingPlantFrameHeight * this.snappingPlantScale
             );
         });
-    
+
+        // Draw enemy big birds
         const frameWidth = 250;
         const frameHeight = 202;
         this.enemyBigBirds.forEach(enemy => {
@@ -518,60 +567,64 @@ class Background {
                 enemy.x, enemy.y, enemy.width, enemy.height
             );
         });
-    
+
+        // Draw base
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
-    
+
+        // Draw coin progress
         this.coinProgress.draw(ctx);
-    
+
+        // Draw danger message
         if (this.dangerDisplayTime > 0 && !this.game.gameOver && this.gameStarted) {
             const alpha = Math.min(1, this.dangerDisplayTime * 2);
             const pulse = Math.sin(Date.now() / 100) * 0.3 + 1;
-    
             ctx.save();
             ctx.translate(this.width / 2, this.height / 3);
             ctx.scale(pulse, pulse);
-    
             ctx.fillStyle = `rgba(255, 50, 50, ${alpha})`;
             ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
             ctx.lineWidth = 4;
             ctx.font = '60px "Press Start 2P"';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-    
             ctx.strokeText('DANGER!', 0, 0);
             ctx.fillText('DANGER!', 0, 0);
-    
             ctx.restore();
         }
-    
-        if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted && this.evilWaveFullyEnded) {
+
+        // Draw level passed message (only for level one)
+        if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted && this.level === 1) {
             const alpha = Math.min(1, this.levelPassedMessageTime * 2);
             const pulse = Math.sin(Date.now() / 100) * 0.3 + 1;
-    
             ctx.save();
             ctx.translate(this.width / 2, this.height / 3);
             ctx.scale(pulse, pulse);
-    
             ctx.fillStyle = `rgba(50, 255, 50, ${alpha})`;
             ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
             ctx.lineWidth = 4;
             ctx.font = '60px "Press Start 2P"';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-    
             ctx.strokeText('LEVEL ONE PASSED!', 0, 0);
             ctx.fillText('LEVEL ONE PASSED!', 0, 0);
-    
             ctx.restore();
         }
-    
+
+        // If flash transition is active, draw a white overlay with fading alpha
+        if (this.flashTimer > 0) {
+            const alpha = this.flashTimer / this.FLASH_DURATION;
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.fillRect(0, 0, this.width, this.height);
+        }
+
+        // Draw game over panels or start screen
         if (this.game.gameOver) {
             const colors = this.coinProgress.colors;
             const panelWidth = 180;
             const panelHeight = 160;
             const panelX = (this.width - panelWidth) / 2;
             const panelY = (this.height - panelHeight) / 2 - 50;
-    
+
             ctx.fillStyle = colors.background;
             ctx.strokeStyle = colors.border;
             ctx.lineWidth = 4;
@@ -588,34 +641,34 @@ class Background {
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
-    
+
             ctx.font = '18px "Press Start 2P", monospace';
             ctx.fillStyle = colors.title.main;
             ctx.textAlign = 'center';
             ctx.fillText('GAME OVER', panelX + panelWidth / 2, panelY + 30);
-    
+
             ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.title.main;
             ctx.fillText('SCORE', panelX + panelWidth / 2, panelY + 60);
-    
+
             ctx.fillStyle = colors.text;
             ctx.font = '20px "Press Start 2P", monospace';
             ctx.fillText(this.getBird()?.score.toString() || '0', panelX + panelWidth / 2, panelY + 90);
-    
+
             ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.title.main;
             ctx.fillText('BEST', panelX + panelWidth / 2, panelY + 120);
-    
+
             ctx.fillStyle = colors.text;
             ctx.font = '20px "Press Start 2P", monospace';
             const bestScore = this.scoreManager.getBestScore();
             ctx.fillText(bestScore.toString(), panelX + panelWidth / 2, panelY + 150);
-    
+
             const btnWidth = 120;
             const btnHeight = 40;
             const btnX = (this.width - btnWidth) / 2;
             const btnY = panelY + panelHeight + 10;
-    
+
             ctx.fillStyle = colors.fill.start;
             ctx.strokeStyle = colors.border;
             ctx.lineWidth = 4;
@@ -632,11 +685,11 @@ class Background {
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
-    
+
             ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.text;
             ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
-    
+
             const returnBtnWidth = 240;
             const returnBtnHeight = 40;
             const returnBtnX = (this.width - returnBtnWidth) / 2;
