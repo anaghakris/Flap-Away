@@ -40,6 +40,9 @@ ASSET_MANAGER.downloadAll(() => {
     gameEngine.isTransitioning = false;
     gameEngine.lastTransitionTime = 0; 
     gameEngine.currentState = 'menu'; 
+    
+    window.gameEngine = gameEngine; 
+    const debugButtons = new DebugButtons(gameEngine);
 
     canvas.tabIndex = 1;
     canvas.focus();

@@ -3,7 +3,10 @@
 <head>
     <meta charset="utf-8">
     <title>Flap Away!</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/17.0.2/umd/react.development.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.2/umd/react-dom.development.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         canvas {
             border: 1px solid black;
@@ -24,9 +27,11 @@
     <script src="./Coin.js"></script>
     <script src="./CoinProgress.js"></script>
     <script src="./StartPage.js"></script>
+    <script src="./DebugButtons.js"></script>
     <script src="./main.js"></script>
 </head>
 <body>
     <canvas id="gameWorld" width="800" height="600"></canvas>
+    <div id="debug-buttons"></div>
 </body>
 </html>
