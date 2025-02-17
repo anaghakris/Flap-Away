@@ -110,42 +110,48 @@ class Background {
     }
 
     reset() {
-        // Force the game back to level 1 and load Level 1 assets
         this.level = 1;
         this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
         this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
         this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
-
-        // Clear existing entities and reset game progression
+    
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
         this.gameStarted = false;
         this.pipePairCount = 0;
         this.hasCollided = false;
-
-        if (this.pipeSpawnInterval) {
-            clearInterval(this.pipeSpawnInterval);
-        }
-        this.setupPipeSpawning();
-        this.coinProgress.reset();
-
-        this.enemyBigBirds = [];
+    
+        this.dangerDisplayTime = 0;
         this.evilWaveActive = false;
         this.evilWaveTriggered = false;
         this.evilWaveBirdsSpawned = 0;
+        this.enemyBigBirds = [];
+        this.evilWaveFullyEnded = false;
+    
+        if (this.pipeSpawnInterval) {
+            clearInterval(this.pipeSpawnInterval);
+        }
         if (this.evilWaveInterval) {
             clearInterval(this.evilWaveInterval);
         }
-
+        
+        this.setupPipeSpawning();
+        this.coinProgress.reset();
+    
         this.levelPassedMessageTime = 0;
         this.postEvilWaveDelayTimer = 0;
-        this.evilWaveFullyEnded = false;
     }
 
     startGame() {
         this.gameStarted = true;
+        this.dangerDisplayTime = 0;
+        this.enemyBigBirds = [];
+        this.evilWaveActive = false;
+        this.evilWaveTriggered = false;
+        this.evilWaveBirdsSpawned = 0;
+        
         this.game.entities.forEach(entity => {
             if (entity instanceof Bird) {
                 entity.startGame();
