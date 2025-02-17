@@ -2,16 +2,12 @@ class Background {
     constructor(game) {
         this.game = game;
         this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
-        //this.image1 = ASSET_MANAGER.getAsset("./Sprites/Background/Night.png");
         this.coin = ASSET_MANAGER.getAsset("./Sprites/Background/coin.png");
         this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
         this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
-
-        this.pointSound = ASSET_MANAGER.getAsset("./audio/sfx_point.wav");
-        this.pointSound.volume = 0.3;
 
         this.hitSound = ASSET_MANAGER.getAsset("./audio/sfx_hit.wav");
         this.hitSound.volume = 0.6;
@@ -24,8 +20,6 @@ class Background {
 
         this.swooshSound = ASSET_MANAGER.getAsset("./audio/sfx_swooshing.wav");
         this.hasCollided = false;
-
-        //this.levelOnePassed = false;
 
         this.lastSoundTime = 0;
         this.MIN_SOUND_INTERVAL = 150;
@@ -78,23 +72,22 @@ class Background {
         this.enemyBigBirdFrameCount = 5;
         this.enemyBigBirdFrameDuration = 0.1;
 
-        // === Evil bird wave properties ===
-        this.dangerDisplayTime = 0; // How long to show the warning
-        this.DANGER_DURATION = 1.0; // Show warning for 1 second
-        this.evilWaveActive = false; // Track if an evil wave is active
-        this.evilWaveTriggered = false; // Track if the evil wave has been triggered
-        this.EVIL_WAVE_PIPE_COUNT = 25; // Trigger evil wave at 25 pipes
-        this.evilWaveBirdsSpawned = 0; // Track how many birds have been spawned in the wave
-        this.evilWaveInterval = null; // Interval for spawning birds in the wave
+        this.dangerDisplayTime = 0;
+        this.DANGER_DURATION = 1.0;
+        this.evilWaveActive = false;
+        this.evilWaveTriggered = false;
+        this.EVIL_WAVE_PIPE_COUNT = 25;
+        this.evilWaveBirdsSpawned = 0;
+        this.evilWaveInterval = null;
 
-        // === Level passed message and delay properties ===
-        this.levelPassedMessageDuration = 3; // Duration to show the "Level One Passed" message
-        this.levelPassedMessageTime = 0; // Timer for the message
-        this.postEvilWaveDelay = 5; // Delay in seconds before spawning pipes again
-        this.postEvilWaveDelayTimer = 0; // Timer for the delay
+        this.levelPassedMessageDuration = 3;
+        this.levelPassedMessageTime = 0;
+        this.postEvilWaveDelay = 5;
+        this.postEvilWaveDelayTimer = 0;
+        this.evilWaveFullyEnded = false;
 
-        // === State to track when the evil wave has fully ended ===
-        this.evilWaveFullyEnded = false; // Tracks if the evil wave has fully ended (birds and danger are gone)
+        // Initialize ScoreManager
+        this.scoreManager = new ScoreManager(this.game);
     }
 
     playSound(sound) {
@@ -128,7 +121,6 @@ class Background {
             clearInterval(this.evilWaveInterval);
         }
 
-        // Reset level passed message and delay timers
         this.levelPassedMessageTime = 0;
         this.postEvilWaveDelayTimer = 0;
         this.evilWaveFullyEnded = false;
@@ -142,6 +134,7 @@ class Background {
             }
         });
     }
+
     setupPipeSpawning() {
         this.pipeSpawnInterval = setInterval(() => {
             if (this.gameStarted && !this.game.gameOver && !this.evilWaveActive && this.postEvilWaveDelayTimer <= 0) {
@@ -224,7 +217,6 @@ class Background {
 
         this.pipePairCount++;
 
-        // Check if evil wave should be triggered
         if (!this.evilWaveTriggered && this.pipePairCount === this.EVIL_WAVE_PIPE_COUNT) {
             this.triggerEvilWave();
         }
@@ -251,16 +243,13 @@ class Background {
         this.evilWaveActive = true;
         this.evilWaveTriggered = true;
 
-        // Clear existing pipes and plants
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
 
-        // Stop spawning new pipes
         clearInterval(this.pipeSpawnInterval);
         this.pipeSpawnInterval = null;
 
-        // Spawn 4 evil birds at intervals
         this.evilWaveBirdsSpawned = 0;
         this.evilWaveInterval = setInterval(() => {
             if (this.evilWaveBirdsSpawned < 4) {
@@ -269,47 +258,40 @@ class Background {
             } else {
                 clearInterval(this.evilWaveInterval);
             }
-        }, 1000); // Spawn a bird every 1 second
+        }, 1000);
     }
 
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
 
-        // Update danger display timer
         if (this.dangerDisplayTime > 0) {
             this.dangerDisplayTime -= this.game.clockTick;
         }
 
-        // Trigger level passed message only after the full evil wave is done,
-        // there are no enemy birds left, and the danger sign has disappeared.
         if (this.evilWaveActive &&
             this.evilWaveBirdsSpawned === 4 &&
             this.enemyBigBirds.length === 0 &&
             this.dangerDisplayTime <= 0) {
             this.evilWaveActive = false;
-            this.evilWaveFullyEnded = true; // Mark the evil wave as fully ended
-            this.levelPassedMessageTime = this.levelPassedMessageDuration; // Show "Level One Passed" message
-            this.postEvilWaveDelayTimer = this.postEvilWaveDelay; // Start the delay timer
+            this.evilWaveFullyEnded = true;
+            this.levelPassedMessageTime = this.levelPassedMessageDuration;
+            this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
 
-        // Update level passed message timer
         if (this.levelPassedMessageTime > 0) {
             this.levelPassedMessageTime -= this.game.clockTick;
         }
 
-        // Update post-evil wave delay timer
         if (this.postEvilWaveDelayTimer > 0) {
             this.postEvilWaveDelayTimer -= this.game.clockTick;
-            return; // Skip the rest of the update logic during the delay
+            return;
         }
 
-        // Restart pipe spawning after the delay if the evil wave has fully ended
         if (this.evilWaveFullyEnded && !this.pipeSpawnInterval) {
             this.setupPipeSpawning();
-            this.evilWaveFullyEnded = false; // Reset the state
+            this.evilWaveFullyEnded = false;
         }
 
-        // Move pipes only if no evil wave is active
         if (!this.evilWaveActive) {
             this.pipeArray.forEach(pipe => {
                 pipe.x -= this.pipeSpeed;
@@ -337,86 +319,30 @@ class Background {
         const bird = this.getBird();
         if (bird) {
             this.pipeArray.forEach(pipe => {
-                if (!pipe.passed && bird.x > pipe.x + pipe.width && pipe.type === 'top') {
-                    pipe.passed = true;
-                    bird.score++;
-                    this.playSound(this.pointSound);
-                }
+                this.scoreManager.updateScore(bird, pipe);
             });
 
-            const updateBestScore = () => {
-                const currentScore = bird.score;
-                const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                if (currentScore > bestScore) {
-                    localStorage.setItem('bestScore', currentScore.toString());
-                }
-            };
-    
-        if (!bird.invincible) {
-            for (const pipe of this.pipeArray) {
-                if (this.checkPipeCollision(bird, pipe)) {
-                    this.playSound(this.hitSound);
-                    if (this.swooshSound) {
-                        this.swooshSound.currentTime = 0;
-                        this.swooshSound.play();
+            if (!bird.invincible) {
+                for (const pipe of this.pipeArray) {
+                    if (this.checkPipeCollision(bird, pipe)) {
+                        this.handleCollision(bird);
+                        break;
                     }
-                    this.game.gameOver = true;
-                    this.game.hasCollided = true;
-                    bird.velocity = 0;
-                    bird.rotation = bird.maxRotationDown;
-                    updateBestScore();
-                    // const currentScore = bird.score;
-                    // const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                    // if (currentScore > bestScore) {
-                    //     localStorage.setItem('bestScore', currentScore.toString());
-                    // }
-                    break;
                 }
-            }
-    
-            for (const plant of this.snappingPlants) {
-                if (this.checkPlantCollision(bird, plant)) {
-                    this.playSound(this.hitSound);
-                    if (this.swooshSound) {
-                        this.swooshSound.currentTime = 0;
-                        this.swooshSound.play();
-                     }
-                    this.game.gameOver = true;
-                    this.game.hasCollided = true;
-                    bird.velocity = 0;
-                    bird.rotation = bird.maxRotationDown;
-                    updateBestScore();
-                    // const currentScore = bird.score;
-                    // const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                    // if (currentScore > bestScore) {
-                    //     localStorage.setItem('bestScore', currentScore.toString());
-                    // }
-                    break;
-                }
-            }
 
-            this.enemyBigBirds.forEach(enemy => {
-                if (this.checkEnemyBigBirdCollision(bird, enemy)) {
-                    this.playSound(this.hitSound);
-                    if (this.swooshSound) {
-                        this.swooshSound.currentTime = 0;
-                        this.swooshSound.play();
+                for (const plant of this.snappingPlants) {
+                    if (this.checkPlantCollision(bird, plant)) {
+                        this.handleCollision(bird);
+                        break;
                     }
-                    this.game.gameOver = true;
-                    this.game.hasCollided = true;
-                    bird.velocity = 0;
-                    bird.rotation = bird.maxRotationDown;
-                    updateBestScore();
-                    // const currentScore = bird.score;
-                    // const bestScore = parseInt(localStorage.getItem('bestScore') || '0');
-                    // if (currentScore > bestScore) {
-                    //     localStorage.setItem('bestScore', currentScore.toString());
-                    // }
                 }
-            });
 
-        }
-        updateBestScore();
+                this.enemyBigBirds.forEach(enemy => {
+                    if (this.checkEnemyBigBirdCollision(bird, enemy)) {
+                        this.handleCollision(bird);
+                    }
+                });
+            }
 
             this.coins.forEach(coin => {
                 if (!coin.collected && coin.checkCollision(bird)) {
@@ -432,7 +358,6 @@ class Background {
             });
         }
 
-        // Clean up off-screen elements
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
         this.snappingPlants = this.snappingPlants.filter(plant => {
             const isOnScreen = plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0;
@@ -442,12 +367,24 @@ class Background {
         });
         this.coins = this.coins.filter(coin => !coin.collected && coin.x + 50 > 0);
 
-        // Update enemy big birds
         this.enemyBigBirds.forEach(enemy => {
             enemy.x -= this.enemyBigBirdSpeed;
             enemy.elapsedTime += this.game.clockTick;
         });
         this.enemyBigBirds = this.enemyBigBirds.filter(enemy => enemy.x + enemy.width > 0);
+    }
+
+    handleCollision(bird) {
+        this.playSound(this.hitSound);
+        if (this.swooshSound) {
+            this.swooshSound.currentTime = 0;
+            this.swooshSound.play();
+        }
+        this.game.gameOver = true;
+        this.game.hasCollided = true;
+        bird.velocity = 0;
+        bird.rotation = bird.maxRotationDown;
+        this.scoreManager.updateBestScore(bird.score);
     }
 
     getBird() {
@@ -530,20 +467,8 @@ class Background {
     }
 
     draw(ctx) {
-        // Draw the day background
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
-
-        // For night background
-        // if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted && this.evilWaveFullyEnded) {
-        //     this.levelOnePassed = true;
-        // }
-        // if (this.levelOnePassed) {
-        //     ctx.drawImage(this.image1, 0, 0, this.width, this.height); 
-        // } else {
-        //     ctx.drawImage(this.image, 0, 0, this.width, this.height); 
-        // }
     
-        // Draw pipes
         this.pipeArray.forEach(pipe => {
             if (pipe.type === 'top') {
                 ctx.save();
@@ -562,24 +487,12 @@ class Background {
                     pipe.x, pipe.y, pipe.width, pipe.height
                 );
             }
-    
-            // Debug: Draw collision boxes for pipes
-            ctx.strokeStyle = 'red';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(
-                pipe.x + this.PIPE_HORIZONTAL_PADDING,
-                pipe.y + (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : 0),
-                pipe.width - 2 * this.PIPE_HORIZONTAL_PADDING,
-                pipe.height - (pipe.type === 'top' ? this.PIPE_VERTICAL_PADDING : 0)
-            );
         });
     
-        // Draw coins
         this.coins.forEach(coin => {
             coin.draw(ctx);
         });
     
-        // Draw snapping plants
         this.snappingPlants.forEach(plant => {
             if (plant.elapsedTime < 0) return;
     
@@ -593,34 +506,8 @@ class Background {
                 this.snappingPlantFrameWidth * this.snappingPlantScale,
                 this.snappingPlantFrameHeight * this.snappingPlantScale
             );
-    
-            // Debug: Draw collision boxes for snapping plants
-            plant.state = (frame >= 2 && frame <= 4) ? "SNAPPING" : "IDLE";
-            const collisionFactors = this.PLANT_COLLISION_STATES[plant.state];
-    
-            const plantScale = this.snappingPlantScale;
-            const collisionWidth = this.snappingPlantFrameWidth * plantScale * collisionFactors.widthFactor;
-            const collisionHeight = this.snappingPlantFrameHeight * plantScale * collisionFactors.heightFactor;
-    
-            let plantCollisionX = plant.x + (this.snappingPlantFrameWidth * plantScale - collisionWidth) / 2;
-            let plantCollisionY;
-    
-            if (plant.type === "top") {
-                if (plant.state === "SNAPPING") {
-                    plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale;
-                } else {
-                    plantCollisionY = plant.y + this.snappingPlantTopFrameHeight * plantScale - collisionHeight;
-                }
-            } else {
-                plantCollisionY = plant.y + (this.snappingPlantFrameHeight * plantScale - collisionHeight) * (plant.state === "SNAPPING" ? 0.9 : 0.8);
-            }
-    
-            ctx.strokeStyle = 'blue';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(plantCollisionX, plantCollisionY, collisionWidth, collisionHeight);
         });
     
-        // Draw enemy big birds
         const frameWidth = 250;
         const frameHeight = 202;
         this.enemyBigBirds.forEach(enemy => {
@@ -632,19 +519,16 @@ class Background {
             );
         });
     
-        // Draw the base (ground)
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
     
-        // Draw the coin progress bar
         this.coinProgress.draw(ctx);
     
-        // Draw danger warning if active
         if (this.dangerDisplayTime > 0 && !this.game.gameOver && this.gameStarted) {
-            const alpha = Math.min(1, this.dangerDisplayTime * 2); // Fade out
-            const pulse = Math.sin(Date.now() / 100) * 0.3 + 1; // Pulsing scale
+            const alpha = Math.min(1, this.dangerDisplayTime * 2);
+            const pulse = Math.sin(Date.now() / 100) * 0.3 + 1;
     
             ctx.save();
-            ctx.translate(this.width / 2, this.height / 3); // Center horizontally, 1/3 from top
+            ctx.translate(this.width / 2, this.height / 3);
             ctx.scale(pulse, pulse);
     
             ctx.fillStyle = `rgba(255, 50, 50, ${alpha})`;
@@ -660,16 +544,15 @@ class Background {
             ctx.restore();
         }
     
-        // Draw "Level One Passed" message only when the evil wave has fully ended
         if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted && this.evilWaveFullyEnded) {
-            const alpha = Math.min(1, this.levelPassedMessageTime * 2); // Fade out
-            const pulse = Math.sin(Date.now() / 100) * 0.3 + 1; // Pulsing scale
+            const alpha = Math.min(1, this.levelPassedMessageTime * 2);
+            const pulse = Math.sin(Date.now() / 100) * 0.3 + 1;
     
             ctx.save();
-            ctx.translate(this.width / 2, this.height / 3); // Center horizontally, 1/3 from top
+            ctx.translate(this.width / 2, this.height / 3);
             ctx.scale(pulse, pulse);
     
-            ctx.fillStyle = `rgba(50, 255, 50, ${alpha})`; // Green color for success
+            ctx.fillStyle = `rgba(50, 255, 50, ${alpha})`;
             ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
             ctx.lineWidth = 4;
             ctx.font = '60px "Press Start 2P"';
@@ -682,7 +565,6 @@ class Background {
             ctx.restore();
         }
     
-        // Draw game over screen
         if (this.game.gameOver) {
             const colors = this.coinProgress.colors;
             const panelWidth = 180;
@@ -726,8 +608,8 @@ class Background {
     
             ctx.fillStyle = colors.text;
             ctx.font = '20px "Press Start 2P", monospace';
-            const bestScore = localStorage.getItem('bestScore') || '0';
-            ctx.fillText(bestScore, panelX + panelWidth / 2, panelY + 150);
+            const bestScore = this.scoreManager.getBestScore();
+            ctx.fillText(bestScore.toString(), panelX + panelWidth / 2, panelY + 150);
     
             const btnWidth = 120;
             const btnHeight = 40;
@@ -759,7 +641,7 @@ class Background {
             const returnBtnHeight = 40;
             const returnBtnX = (this.width - returnBtnWidth) / 2;
             const returnBtnY = btnY + btnHeight + 10;
-    
+
             ctx.fillStyle = colors.fill.start;
             ctx.strokeStyle = colors.border;
             ctx.lineWidth = 4;
@@ -776,11 +658,10 @@ class Background {
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
-    
+
             ctx.font = '16px "Press Start 2P", monospace';
             ctx.fillStyle = colors.text;
             ctx.fillText('RETURN TO MENU', returnBtnX + returnBtnWidth / 2, returnBtnY + returnBtnHeight / 2 + 8);
-    
         } else if (!this.gameStarted) {
             ctx.font = "24px Arial";
             ctx.fillStyle = "white";
