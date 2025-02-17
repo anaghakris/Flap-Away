@@ -224,7 +224,7 @@ class Bird {
     
         const centerX = this.x + (34 * scale);  
         const centerY = this.y + (35 * scale); 
-        const radius = 15; 
+        const radius = 10; 
     
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
