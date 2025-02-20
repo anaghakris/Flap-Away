@@ -106,42 +106,46 @@ class Bird {
         if (!this.gameStarted) return;
 
         if (this.invincible) {
-            this.invincibleTimer -= this.game.clockTick;
-            if (this.invincibleTimer <= 0) {
-                this.invincible = false;
-                this.invincibleTimer = 0;
-                this.powerUpAnimation.active = false;
-                
-                if (this.powerSoundLoop) {
-                    this.powerSoundLoop.pause();
-                    this.powerSoundLoop = null;
+            if (!this.game.gameOver) {
+                this.invincibleTimer -= this.game.clockTick;
+                if (this.invincibleTimer <= 0) {
+                    this.invincible = false;
+                    this.invincibleTimer = 0;
+                    this.powerUpAnimation.active = false;
+
+                    if (this.powerSoundLoop) {
+                        this.powerSoundLoop.pause();
+                        this.powerSoundLoop = null;
+                    }
                 }
             }
         }
 
         if (this.powerUpAnimation.active) {
-            this.powerUpAnimation.timer += this.game.clockTick;
-            
-            if (this.powerUpAnimation.timer <= 0.5) {
-                this.powerUpAnimation.scale = this.powerUpAnimation.timer * 2;
-                this.powerUpAnimation.opacity = this.powerUpAnimation.timer * 2;
-            }
-            else if (this.powerUpAnimation.timer <= 1.5) {
-                this.powerUpAnimation.scale = 1;
-                this.powerUpAnimation.opacity = 1;
-            }
-            else if (this.powerUpAnimation.timer <= 2) {
-                const fadeProgress = (this.powerUpAnimation.timer - 1.5) * 2;
-                this.powerUpAnimation.opacity = 1 - fadeProgress;
-            }
-            else {
-                this.powerUpAnimation.active = false;
-            }
+            if (!this.game.gameOver) {
+                this.powerUpAnimation.timer += this.game.clockTick;
 
-            this.powerUpAnimation.flashTimer += this.game.clockTick;
-            if (this.powerUpAnimation.flashTimer >= this.powerUpAnimation.flashDuration) {
-                this.powerUpAnimation.showFlash = !this.powerUpAnimation.showFlash;
-                this.powerUpAnimation.flashTimer = 0;
+                if (this.powerUpAnimation.timer <= 0.5) {
+                    this.powerUpAnimation.scale = this.powerUpAnimation.timer * 2;
+                    this.powerUpAnimation.opacity = this.powerUpAnimation.timer * 2;
+                }
+                else if (this.powerUpAnimation.timer <= 1.5) {
+                    this.powerUpAnimation.scale = 1;
+                    this.powerUpAnimation.opacity = 1;
+                }
+                else if (this.powerUpAnimation.timer <= 2) {
+                    const fadeProgress = (this.powerUpAnimation.timer - 1.5) * 2;
+                    this.powerUpAnimation.opacity = 1 - fadeProgress;
+                }
+                else {
+                    this.powerUpAnimation.active = false;
+                }
+
+                this.powerUpAnimation.flashTimer += this.game.clockTick;
+                if (this.powerUpAnimation.flashTimer >= this.powerUpAnimation.flashDuration) {
+                    this.powerUpAnimation.showFlash = !this.powerUpAnimation.showFlash;
+                    this.powerUpAnimation.flashTimer = 0;
+                }
             }
         }
 
@@ -150,7 +154,7 @@ class Bird {
                 this.powerSoundLoop.pause();
                 this.powerSoundLoop = null;
             }
-            
+
             this.velocity += this.gravity;
             this.y += this.velocity;
             this.rotation = this.maxRotationDown;
@@ -207,6 +211,7 @@ class Bird {
             this.game.gameOver = true;
         }
     }
+
     draw(ctx) {
         if (this.powerUpAnimation.active) {
             this.drawPowerUpAnimation(ctx);
