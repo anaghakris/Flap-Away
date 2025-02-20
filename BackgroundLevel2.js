@@ -1,14 +1,14 @@
-// Level One Background – behaves exactly as it did before, then transitions to Level Two.
-class Background {
+// Level Two Background – completely separate from Level One.
+class BackgroundLevel2 {
     constructor(game) {
         this.game = game;
-        this.level = 1;
+        this.level = 2;
 
-        // Level One assets
-        this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
-        this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
-        this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
-        this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
+        // Level Two assets
+        this.image = ASSET_MANAGER.getAsset("./Sprites/Background/NightCity.png");
+        this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base_night.png");
+        this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
+        this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
         this.coin = ASSET_MANAGER.getAsset("./Sprites/Background/coin.png");
         
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
@@ -46,7 +46,7 @@ class Background {
         this.minOpening = 140;
         this.maxOpening = 200;
 
-        // Snapping plant properties
+        // Snapping plant properties (same as level one)
         this.snappingPlantFrameWidth = 158;
         this.snappingPlantFrameHeight = 250;
         this.snappingPlantTopFrameHeight = 90;
@@ -54,7 +54,8 @@ class Background {
         this.snappingPlantFrameDuration = 0.3;
         this.snappingPlantScale = 0.3;
 
-        this.gameStarted = false;
+        // Important: start Level Two with fresh counters.
+        this.gameStarted = false; // Waiting state; will be set true on input.
         this.pipePairCount = 0;
         this.pipeSpawnInterval = null;
         this.setupPipeSpawning();
@@ -70,8 +71,9 @@ class Background {
             SNAPPING: { widthFactor: 0.6, heightFactor: 0.6 }
         };
 
-        // Level One coin progress tracker
+        // Level Two coin progress tracker – start with 0 coins.
         this.coinProgress = new CoinProgress(game, this.width, 8);
+        this.coinProgress.reset();  // Ensure coin count is 0.
 
         this.enemyBigBirdSprite = ASSET_MANAGER.getAsset("./Sprites/Bird/evil_bird.png");
         this.enemyBigBirds = [];
@@ -83,22 +85,21 @@ class Background {
         this.DANGER_DURATION = 1.0;
         this.evilWaveActive = false;
         this.evilWaveTriggered = false;
-        // Use your original count for level one evil wave trigger
+        // You can adjust this threshold for Level Two if needed.
         this.EVIL_WAVE_PIPE_COUNT = 27;
         this.evilWaveBirdsSpawned = 0;
         this.evilWaveInterval = null;
 
         this.levelPassedMessageDuration = 3;
         this.levelPassedMessageTime = 0;
-        // Flag to indicate the level-passed message has been displayed
-        this.levelPassedMessageDisplayed = false;
-        // This delay ensures that after the evil birds pass, we wait a moment before showing the message.
-        this.postEvilWaveDelay = 4;  // Adjust as needed
+        // Level Two may also display a "Level Two Passed" message later if needed.
+        this.postEvilWaveDelay = 5;
         this.postEvilWaveDelayTimer = 0;
+        this.evilWaveFullyEnded = false;
 
-        // Flash timer for level transition effect (if needed)
+        // Flash timer for level transition (if any)
         this.flashTimer = 0;
-        this.FLASH_DURATION = 1.0; // seconds
+        this.FLASH_DURATION = 1.0;
 
         // Initialize ScoreManager
         this.scoreManager = new ScoreManager(this.game);
@@ -114,16 +115,17 @@ class Background {
     }
 
     reset() {
-        this.level = 1;
-        this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
-        this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
-        this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
-        this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
+        // Reset Level Two values to initial (all counters to 0)
+        this.level = 2;
+        this.image = ASSET_MANAGER.getAsset("./Sprites/Background/NightCity.png");
+        this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base_night.png");
+        this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
+        this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
     
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
-        this.gameStarted = false;
+        this.gameStarted = false; // Wait for input to start
         this.pipePairCount = 0;
         this.hasCollided = false;
     
@@ -132,6 +134,7 @@ class Background {
         this.evilWaveTriggered = false;
         this.evilWaveBirdsSpawned = 0;
         this.enemyBigBirds = [];
+        this.evilWaveFullyEnded = false;
     
         if (this.pipeSpawnInterval) {
             clearInterval(this.pipeSpawnInterval);
@@ -146,10 +149,10 @@ class Background {
         this.levelPassedMessageTime = 0;
         this.postEvilWaveDelayTimer = 0;
         this.flashTimer = 0;
-        this.levelPassedMessageDisplayed = false;
     }
 
     startGame() {
+        // Called when the player starts Level Two.
         this.gameStarted = true;
         this.dangerDisplayTime = 0;
         this.enemyBigBirds = [];
@@ -157,7 +160,7 @@ class Background {
         this.evilWaveTriggered = false;
         this.evilWaveBirdsSpawned = 0;
         
-        // Reset the bird's state
+        // Reinitialize the bird's state (so it starts moving)
         this.game.entities.forEach(entity => {
             if (entity instanceof Bird) {
                 entity.startGame();
@@ -219,9 +222,37 @@ class Background {
         const coinY = minY + Math.random() * (maxY - minY);
         this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed, this.coinSound));
     
-        // Attach snapping plant randomly (Level One logic)
+        // For Level Two, you may choose different plant behavior.
+        // For now, we'll attach a snapping plant randomly.
         const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
-        if (this.pipePairCount % 2 === 0) {
+        if (this.pipePairCount % 3 === 0) {
+            // Example: moving gap effect
+            const moveType = Math.floor(Math.random() * 3);
+            if (moveType === 0) {
+                topPipe.isMoving = true;
+                topPipe.movingTime = 0;
+                topPipe.movingAmplitude = 20;
+                topPipe.movingSpeed = 2;
+            } else if (moveType === 1) {
+                bottomPipe.isMoving = true;
+                bottomPipe.movingTime = 0;
+                bottomPipe.movingAmplitude = 20;
+                bottomPipe.movingSpeed = 2;
+                bottomPipe.originalY = bottomPipe.y;
+            } else {
+                topPipe.isMoving = true;
+                bottomPipe.isMoving = true;
+                topPipe.movingTime = 0;
+                bottomPipe.movingTime = 0;
+                topPipe.movingAmplitude = 15;
+                topPipe.movingSpeed = 2;
+                bottomPipe.movingAmplitude = 15;
+                bottomPipe.movingSpeed = 2;
+                topPipe.movingPhase = 0;
+                bottomPipe.movingPhase = Math.PI;
+                bottomPipe.originalY = bottomPipe.y;
+            }
+        } else {
             if (Math.random() < 0.5) {
                 const topPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
                 const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 20;
@@ -231,7 +262,8 @@ class Background {
                     elapsedTime: 0,
                     type: "top",
                     state: "IDLE",
-                    lastFrame: -1
+                    lastFrame: -1,
+                    attachedTo: "top"
                 });
                 topPipe.hasPlant = true;
             } else {
@@ -243,7 +275,8 @@ class Background {
                     elapsedTime: 0,
                     type: "bottom",
                     state: "IDLE",
-                    lastFrame: -1
+                    lastFrame: -1,
+                    attachedTo: "bottom"
                 });
                 bottomPipe.hasPlant = true;
             }
@@ -252,10 +285,9 @@ class Background {
         this.pipePairCount++;
     
         if (!this.evilWaveTriggered && this.pipePairCount === this.EVIL_WAVE_PIPE_COUNT) {
-            // For Level One, when the threshold is reached, trigger the evil wave
-            // and set the level passed message—but only show that after a delay.
-            this.triggerEvilWave();
-            this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
+            // For Level Two, you might set a different trigger, or display a message when complete.
+            this.levelPassedMessageTime = this.levelPassedMessageDuration;
+            this.evilWaveTriggered = true; // For example, if you want to trigger an end-of-level sequence.
         }
     }
     
@@ -301,39 +333,18 @@ class Background {
             this.dangerDisplayTime -= this.game.clockTick;
         }
     
-        // Check if the evil wave has ended and all evil birds are off the screen
         if (this.evilWaveActive &&
             this.evilWaveBirdsSpawned === 4 &&
             this.enemyBigBirds.length === 0 &&
             this.dangerDisplayTime <= 0) {
             this.evilWaveActive = false;
-            // Set the level passed message time only after the evil wave has fully ended
-            if (this.level === 1) {
-                this.levelPassedMessageTime = this.levelPassedMessageDuration;
-                this.levelPassedMessageDisplayed = true;
-            }
+            // For Level Two, you might set a message here if needed.
+            this.levelPassedMessageTime = this.levelPassedMessageDuration;
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
     
-        // Handle the level passed message
         if (this.levelPassedMessageTime > 0) {
             this.levelPassedMessageTime -= this.game.clockTick;
-            console.log("LevelPassedMessageTime:", this.levelPassedMessageTime);
-            if (this.levelPassedMessageTime <= 0 && this.level === 1) {
-                console.log("Starting flash transition");
-                this.flashTimer = this.FLASH_DURATION;
-            }
-        }
-    
-        // Flash transition: during flash, pause normal updates.
-        if (this.flashTimer > 0) {
-            this.flashTimer -= this.game.clockTick;
-            if (this.flashTimer <= 0 && this.level === 1) {
-                console.log("Flash complete; transitioning to Level 2");
-                this.transitionToLevel2();
-                return;
-            }
-            return; // Skip further updates during flash.
         }
     
         if (this.postEvilWaveDelayTimer > 0) {
@@ -350,6 +361,33 @@ class Background {
             this.pipeArray.forEach(pipe => {
                 pipe.x -= this.pipeSpeed;
             });
+        }
+    
+        // Update moving pipes for Level Two (if any)
+        for (let i = 0; i < this.pipeArray.length; i += 2) {
+            const topPipe = this.pipeArray[i];
+            const bottomPipe = this.pipeArray[i + 1];
+            if (topPipe && bottomPipe && topPipe.isMoving) {
+                topPipe.movingTime += this.game.clockTick;
+                const offset = Math.sin(topPipe.movingTime * topPipe.movingSpeed) * topPipe.movingAmplitude;
+                const newOpening = Math.max(this.minOpening, topPipe.originalOpening + offset);
+                topPipe.height = topPipe.originalTopHeight;
+                bottomPipe.y = topPipe.height + newOpening;
+                bottomPipe.height = this.baseY - bottomPipe.y;
+            }
+            if (bottomPipe && bottomPipe.isMoving && !topPipe.isMoving) {
+                bottomPipe.movingTime += this.game.clockTick;
+                const offset = Math.sin(bottomPipe.movingTime * bottomPipe.movingSpeed) * bottomPipe.movingAmplitude;
+                bottomPipe.y = bottomPipe.originalY + offset;
+                bottomPipe.height = this.baseY - bottomPipe.y;
+            }
+            if (topPipe && topPipe.isMoving && !bottomPipe.isMoving) {
+                topPipe.movingTime += this.game.clockTick;
+                const offset = Math.sin(topPipe.movingTime * topPipe.movingSpeed) * topPipe.movingAmplitude;
+                topPipe.height = topPipe.originalTopHeight - offset;
+                bottomPipe.y = topPipe.height + topPipe.originalOpening;
+                bottomPipe.height = this.baseY - bottomPipe.y;
+            }
         }
     
         // Update snapping plants
@@ -423,36 +461,6 @@ class Background {
             enemy.elapsedTime += this.game.clockTick;
         });
         this.enemyBigBirds = this.enemyBigBirds.filter(enemy => enemy.x + enemy.width > 0);
-    }
-    
-    transitionToLevel2() {
-        // Transition to Level Two: update level property and load new assets.
-        this.level = 2;
-        // Clear Level One-specific arrays.
-        this.pipeArray = [];
-        this.snappingPlants = [];
-        this.coins = [];
-        this.enemyBigBirds = [];
-        // Load Level Two assets.
-        this.image = ASSET_MANAGER.getAsset("./Sprites/Background/NightCity.png");
-        this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base_night.png");
-        this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
-        this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
-        // Reset progression counters.
-        this.pipePairCount = 0;
-        this.evilWaveTriggered = false;
-        // Reset coin progress.
-        this.coinProgress.reset();
-        // Restart pipe spawning if needed.
-        if (!this.pipeSpawnInterval) {
-            this.setupPipeSpawning();
-        }
-        // IMPORTANT: Reinitialize the bird's movement so it keeps flying.
-        let bird = this.getBird();
-        if (bird && bird.startGame) {
-            bird.startGame();
-        }
-        console.log("Transitioned to Level 2");
     }
     
     handleCollision(bird) {
@@ -610,25 +618,8 @@ class Background {
         // Draw coin progress
         this.coinProgress.draw(ctx);
     
-        // --- Conditional Messages ---
-        // During Level One, if the level passed message is active, draw it.
-        if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted && this.level === 1) {
-            const alpha = Math.min(1, this.levelPassedMessageTime * 2);
-            const pulse = Math.sin(Date.now() / 100) * 0.3 + 1;
-            ctx.save();
-            ctx.translate(this.width / 2, this.height / 3);
-            ctx.scale(pulse, pulse);
-            ctx.fillStyle = `rgba(50, 255, 50, ${alpha})`;
-            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
-            ctx.lineWidth = 4;
-            ctx.font = '60px "Press Start 2P"';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.strokeText('LEVEL ONE PASSED!', 0, 0);
-            ctx.fillText('LEVEL ONE PASSED!', 0, 0);
-            ctx.restore();
-        } else if (this.dangerDisplayTime > 0 && !this.game.gameOver && this.gameStarted) {
-            // Otherwise, if danger is active and no level passed message, draw danger.
+        // Draw danger message if active
+        if (this.dangerDisplayTime > 0 && !this.game.gameOver && this.gameStarted) {
             const alpha = Math.min(1, this.dangerDisplayTime * 2);
             const pulse = Math.sin(Date.now() / 100) * 0.3 + 1;
             ctx.save();
@@ -642,6 +633,24 @@ class Background {
             ctx.textBaseline = 'middle';
             ctx.strokeText('DANGER!', 0, 0);
             ctx.fillText('DANGER!', 0, 0);
+            ctx.restore();
+        }
+    
+        // Draw level passed message for level two
+        if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted && this.level === 2) {
+            const alpha = Math.min(1, this.levelPassedMessageTime * 2);
+            const pulse = Math.sin(Date.now() / 100) * 0.3 + 1;
+            ctx.save();
+            ctx.translate(this.width / 2, this.height / 3);
+            ctx.scale(pulse, pulse);
+            ctx.fillStyle = `rgba(50, 255, 50, ${alpha})`;
+            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.lineWidth = 4;
+            ctx.font = '60px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.strokeText('LEVEL TWO PASSED!', 0, 0);
+            ctx.fillText('LEVEL TWO PASSED!', 0, 0);
             ctx.restore();
         }
     
@@ -692,6 +701,7 @@ class Background {
             const bestScore = this.scoreManager.getBestScore();
             ctx.fillText(bestScore.toString(), panelX + panelWidth / 2, panelY + 150);
     
+            // Draw RESTART button
             const btnWidth = 120;
             const btnHeight = 40;
             const btnX = (this.width - btnWidth) / 2;
@@ -718,6 +728,7 @@ class Background {
             ctx.fillStyle = colors.text;
             ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
     
+            // Draw RETURN TO MENU button
             const returnBtnWidth = 240;
             const returnBtnHeight = 40;
             const returnBtnX = (this.width - returnBtnWidth) / 2;
