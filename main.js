@@ -7,6 +7,7 @@ ASSET_MANAGER.queueDownload("./Sprites/Background/base.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/bottom pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/top pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Bird/yellowbird-sprite-sheet.png")
+ASSET_MANAGER.queueDownload("./Sprites/Bird/bluebird_sprite_sheet.png")
 ASSET_MANAGER.queueDownload("./Sprites/Bird/evil_bird.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/SnappingPlant.png"); 
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/snapping plants top.png");

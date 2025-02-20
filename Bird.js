@@ -327,4 +327,11 @@ class Bird {
             return true;
         });
     }
+
+    changeSpriteSheet(newSpriteSheet) {
+        this.animator = new Animator(
+            newSpriteSheet,
+            0, 0, 34, 70, 3, 0.2
+        );
+    }
 }
