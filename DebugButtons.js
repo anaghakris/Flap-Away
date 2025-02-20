@@ -95,6 +95,12 @@ class DebugButtons {
             background.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
             background.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
             background.coinProgress = new CoinProgress(this.gameEngine, 800, 8);
+    
+            let bird = this.gameEngine.entities.find(entity => entity instanceof Bird);
+            if (bird) {
+                bird.changeSpriteSheet(ASSET_MANAGER.getAsset("./Sprites/Bird/yellowbird-sprite-sheet.png"));
+                bird.reset(); 
+            }
         }
     
         this.gameEngine.gameOver = false;
