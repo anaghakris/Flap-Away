@@ -70,7 +70,7 @@ class Background {
             SNAPPING: { widthFactor: 0.6, heightFactor: 0.6 }
         };
 
-        this.coinProgress = new CoinProgress(game, this.width, 8);
+        this.coinProgress = new CoinProgress(game, this.width, 2);
 
         this.enemyBigBirdSprite = ASSET_MANAGER.getAsset("./Sprites/Bird/evil_bird.png");
         this.enemyBigBirds = [];

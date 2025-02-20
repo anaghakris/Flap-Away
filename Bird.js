@@ -212,11 +212,7 @@ class Bird {
         }
     }
 
-    draw(ctx) {
-        if (this.powerUpAnimation.active) {
-            this.drawPowerUpAnimation(ctx);
-        }
-    
+    draw(ctx) {   
         if (this.invincible) {
             this.drawPowerBoostEffects(ctx);
         }
@@ -272,44 +268,6 @@ class Bird {
             ctx.strokeText(`Power: ${Math.ceil(this.invincibleTimer)}s`, 400, 80);
             ctx.fillText(`Power: ${Math.ceil(this.invincibleTimer)}s`, 400, 80);
         }
-    }
-
-    drawPowerUpAnimation(ctx) {
-        const centerX = this.game.width / 2;
-        const centerY = this.game.height / 2;
-
-        if (this.powerUpAnimation.showFlash && this.powerUpAnimation.timer <= 0.5) {
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.fillRect(0, 0, this.game.width, this.game.height);
-        }
-
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.scale(this.powerUpAnimation.scale, this.powerUpAnimation.scale);
-
-        if (this.powerUpAnimation.timer <= 1) {
-            const numRays = 12;
-            const maxRayLength = 150 * this.powerUpAnimation.scale;
-            
-            ctx.save();
-            ctx.translate(0, this.powerUpAnimation.textY);
-            ctx.rotate(this.powerUpAnimation.timer * Math.PI);
-
-            for (let i = 0; i < numRays; i++) {
-                const angle = (i / numRays) * Math.PI * 2;
-                const rayLength = maxRayLength * (0.5 + Math.sin(this.powerUpAnimation.timer * 10) * 0.5);
-
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(Math.cos(angle) * rayLength, Math.sin(angle) * rayLength);
-                ctx.strokeStyle = `rgba(255, 165, 0, ${this.powerUpAnimation.opacity * 0.5})`;
-                ctx.lineWidth = 4;
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
-
-        ctx.restore();
     }
 
     drawPowerBoostEffects(ctx) {
