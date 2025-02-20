@@ -61,30 +61,46 @@ class DebugButtons {
             console.error('Background entity not found');
             return;
         }
-
-        background.reset();
+    
+        background.reset();  
         background.level = level;
-
-        if (level === 1) {
-            background.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
-            background.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
-            background.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
-            background.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
-        } else if (level === 2) {
+    
+        if (level === 2) {
             background.image = ASSET_MANAGER.getAsset("./Sprites/Background/NightCity.png");
             background.base = ASSET_MANAGER.getAsset("./Sprites/Background/base_night.png");
             background.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
             background.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
+    
+            background.pipeArray = [];
+            background.snappingPlants = [];
+            background.coins = [];
+            background.enemyBigBirds = [];
+    
+            background.pipePairCount = 0;
+            background.evilWaveTriggered = false;
+            background.coinProgress = new CoinProgress(this.gameEngine, 800, 15);
+    
+            if (!background.pipeSpawnInterval) {
+                background.setupPipeSpawning();
+            }
+    
+            let bird = this.gameEngine.entities.find(entity => entity instanceof Bird);
+            if (bird) {
+                bird.changeSpriteSheet(ASSET_MANAGER.getAsset("./Sprites/Bird/bluebird_sprite_sheet.png"));
+                bird.reset(); 
+            }
+        } else if (level === 1) {
+            background.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
+            background.base = ASSET_MANAGER.getAsset("./Sprites/Background/base.png");
+            background.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
+            background.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
+            background.coinProgress = new CoinProgress(this.gameEngine, 800, 8);
         }
-
+    
         this.gameEngine.gameOver = false;
         this.gameEngine.hasCollided = false;
-
-        const bird = this.gameEngine.entities.find(entity => entity instanceof Bird);
-        if (bird) {
-            bird.reset();
-        }
     }
+    
 
     adjustColor(color, amount) {
         const hex = color.replace('#', '');
