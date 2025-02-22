@@ -14,13 +14,10 @@ class BaseBackground {
         this.enemyBigBirdSprite = ASSET_MANAGER.getAsset("./Sprites/Bird/evil_bird.png");
 
         this.setupSounds();
-        
         this.initializeProperties();
-        
         this.setupGameState();
         
         this.coinProgress = new CoinProgress(game, this.width, level === 1 ? 2 : 8);
-        
         this.scoreManager = new ScoreManager(this.game);
     }
 
@@ -48,15 +45,10 @@ class BaseBackground {
         this.pipeSpacing = 200;
         this.pipeInterval = 2000;
 
-        // snap and non snap
-        this.minOpeningRegular = 140;  //100
-        this.maxOpeningRegular = 200;  //200
-        this.minOpeningSnapping = 200; //130
-        this.maxOpeningSnapping = 200; //200
-
-        // old code
-        // this.minOpening = 140;
-        // this.maxOpening = 200;
+        this.minOpeningRegular = 140;
+        this.maxOpeningRegular = 200;
+        this.minOpeningSnapping = 200;
+        this.maxOpeningSnapping = 200;
 
         this.snappingPlantFrameWidth = 158;
         this.snappingPlantFrameHeight = 250;
@@ -78,6 +70,12 @@ class BaseBackground {
         this.PLANT_COLLISION_STATES = {
             IDLE: { widthFactor: 0.5, heightFactor: 0.4 },
             SNAPPING: { widthFactor: 0.6, heightFactor: 0.6 }
+        };
+
+        this.WAVE_PATTERNS = {
+            TOP: "top",
+            BOTTOM: "bottom",
+            RANDOM: "random"
         };
     }
 
@@ -145,7 +143,6 @@ class BaseBackground {
         this.postEvilWaveDelayTimer = 0;
         this.flashTimer = 0;
 
-        // When resetting in level 2, force the bird's score to 25.
         if (this.level === 2) {
             let bird = this.getBird();
             if (bird) {
@@ -183,22 +180,24 @@ class BaseBackground {
     spawnPipePair() {
         if (!this.gameStarted || this.game.gameOver || this.evilWaveActive || this.postEvilWaveDelayTimer > 0)
             return;
+
         const hasSnappingPlant = this.pipePairCount % 2 === 0;
         let minOpening, maxOpening;
+
         if (this.level === 2) {
-            const extraSpacing = 15; 
-            minOpening = this.minOpeningSnapping + extraSpacing; 
-            maxOpening = this.maxOpeningSnapping + extraSpacing; 
+            const extraSpacing = 15;
+            minOpening = this.minOpeningSnapping + extraSpacing;
+            maxOpening = this.maxOpeningSnapping + extraSpacing;
         } else {
             minOpening = hasSnappingPlant ? this.minOpeningSnapping : this.minOpeningRegular;
             maxOpening = hasSnappingPlant ? this.maxOpeningSnapping : this.maxOpeningRegular;
         }
-        // let minOpening = hasSnappingPlant ? this.minOpeningSnapping : this.minOpeningRegular;
-        // let maxOpening = hasSnappingPlant ? this.maxOpeningSnapping : this.maxOpeningRegular;
+
         const opening = minOpening + Math.random() * (maxOpening - minOpening);
         const minTopPipeHeight = 50;
         const maxTopPipeHeight = this.baseY - opening - 100;
         const topPipeHeight = minTopPipeHeight + Math.random() * (maxTopPipeHeight - minTopPipeHeight);
+
         const topPipe = {
             x: this.width,
             y: 0,
@@ -211,6 +210,7 @@ class BaseBackground {
             originalTopHeight: topPipeHeight,
             originalOpening: opening
         };
+
         const bottomPipe = {
             x: this.width,
             y: topPipeHeight + opening,
@@ -222,13 +222,16 @@ class BaseBackground {
             movingTime: 0,
             originalY: topPipeHeight + opening
         };
+
         this.pipeArray.push(topPipe, bottomPipe);
+
         const minDistanceFromPipe = 100;
         const coinX = topPipe.x + this.pipeWidth + minDistanceFromPipe + Math.random() * this.pipeWidth;
         const maxY = this.baseY - 50;
         const minY = 50;
         const coinY = minY + Math.random() * (maxY - minY);
         this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed, this.coinSound));
+
         const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
         if (this.level === 2 || this.pipePairCount % 2 === 0) {
             if (Math.random() < 0.5) {
@@ -257,25 +260,61 @@ class BaseBackground {
                 bottomPipe.hasPlant = true;
             }
         }
+
         this.pipePairCount++;
         if (!this.evilWaveTriggered && this.pipePairCount === this.EVIL_WAVE_PIPE_COUNT) {
             this.triggerEvilWave();
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
     }
-    
+
     spawnEnemyBigBird() {
         const enemyWidth = this.BIRD_WIDTH * 3;
         const enemyHeight = this.BIRD_HEIGHT * 2;
         
-        // Create more random vertical positions
-        const minY = 50;
-        const maxY = this.baseY - enemyHeight - 150;
-        const y = minY + Math.random() * (maxY - minY);
+        const playerBird = this.getBird();
+        const playerY = playerBird ? playerBird.y : this.height / 2;
         
-        // Space birds based on how many have been spawned
-        const baseSpacing = 300; // Base horizontal spacing between birds
-        const x = this.width + (this.evilWaveBirdsSpawned * baseSpacing);
+        const zones = {
+            TOP: this.height * 0.2,
+            MIDDLE: this.height * 0.5,
+            BOTTOM: this.height * 0.8
+        };
+        
+        let y;
+        let targetY;
+        let verticalSpeed;
+        
+        const attackPattern = Math.random();
+        
+        if (attackPattern < 0.4) {
+            y = playerY + (Math.random() - 0.5) * 100;
+            targetY = playerY;
+            verticalSpeed = (targetY - y) / 60; 
+        } else if (attackPattern < 0.7) {
+            // Top or bottom ambush
+            if (playerY < this.height / 2) {
+                y = zones.BOTTOM;
+                targetY = zones.TOP;
+            } else {
+                y = zones.TOP;
+                targetY = zones.BOTTOM;
+            }
+            verticalSpeed = (targetY - y) / 50; 
+        } else {
+            const positions = [zones.TOP, zones.MIDDLE, zones.BOTTOM];
+            y = positions[Math.floor(Math.random() * positions.length)];
+            targetY = playerY;
+            verticalSpeed = (targetY - y) / 45;
+        }
+        
+        const minY = 50;
+        const maxY = this.baseY - enemyHeight - 50;
+        y = Math.min(Math.max(y, minY), maxY);
+        
+        const baseSpacing = 300;
+        const spacingVariation = Math.random() * 100 - 50;
+        const x = this.width + (this.evilWaveBirdsSpawned * baseSpacing) + spacingVariation;
         
         const enemyBigBird = {
             x: x,
@@ -283,15 +322,19 @@ class BaseBackground {
             width: enemyWidth,
             height: enemyHeight,
             elapsedTime: 0,
-            verticalSpeed: (Math.random() - 0.5) * 1.5,
-            verticalRange: 80,
-            originalY: y
+            verticalSpeed: verticalSpeed,
+            targetY: targetY,
+            accelerationY: 0.1 + Math.random() * 0.2, 
+            maxSpeed: 3 + Math.random() * 2,
+            originalY: y,
+            attackPattern: attackPattern
         };
         
         this.enemyBigBirds.push(enemyBigBird);
         this.dangerDisplayTime = this.DANGER_DURATION;
     }
     
+
     triggerEvilWave() {
         this.evilWaveActive = true;
         this.evilWaveTriggered = true;
@@ -302,51 +345,59 @@ class BaseBackground {
         this.pipeSpawnInterval = null;
         this.evilWaveBirdsSpawned = 0;
         
-        // Initial bird spawn
         this.spawnEnemyBigBird();
         this.evilWaveBirdsSpawned++;
         
-        // Spawn remaining birds with consistent timing but maintained spacing
         const spawnNextBird = () => {
-            if (this.evilWaveBirdsSpawned < 4) {
+            if (this.evilWaveBirdsSpawned < 8) {
+                const randomDelay = 800 + Math.random() * 400;
                 setTimeout(() => {
                     this.spawnEnemyBigBird();
                     this.evilWaveBirdsSpawned++;
                     spawnNextBird();
-                }, 1000); // Consistent 1-second timing
+                }, randomDelay);
             }
         };
         
         spawnNextBird();
     }
+
+    updateEnemyBirds() {
+        for (let bird of this.enemyBigBirds) {
+            bird.x -= this.enemyBigBirdSpeed;
     
+            if (bird.attackPattern < 0.4) {
+                const playerBird = this.getBird();
+                if (playerBird) {
+                    bird.targetY = playerBird.y;
+                }
+            }
+    
+            const distanceToTarget = bird.targetY - bird.y;
+            bird.verticalSpeed += Math.sign(distanceToTarget) * bird.accelerationY;
+            
+            bird.verticalSpeed = Math.min(Math.max(bird.verticalSpeed, -bird.maxSpeed), bird.maxSpeed);
+            
+            bird.y += bird.verticalSpeed;
+            
+            const minY = 50;
+            const maxY = this.baseY - bird.height - 50;
+            if (bird.y < minY || bird.y > maxY) {
+                bird.y = bird.y < minY ? minY : maxY;
+                bird.verticalSpeed *= -0.5; 
+            }
+        }
+    }
+
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
-    
+
         if (this.dangerDisplayTime > 0) {
             this.dangerDisplayTime -= this.game.clockTick;
         }
-    
-        // Update enemy birds movement
-        for (let bird of this.enemyBigBirds) {
-            if (bird.verticalSpeed) {
-                bird.y += bird.verticalSpeed;
-                
-                const distanceFromOriginal = Math.abs(bird.y - bird.originalY);
-                if (distanceFromOriginal > bird.verticalRange) {
-                    bird.verticalSpeed *= -1;
-                }
-                
-                const minY = 50;
-                const maxY = this.baseY - bird.height - 100;
-                if (bird.y < minY || bird.y > maxY) {
-                    bird.verticalSpeed *= -1;
-                    bird.y = bird.y < minY ? minY : maxY;
-                }
-            }
-        }
-    
-        // Rest of your existing update logic
+
+    this.updateEnemyBirds();
+
         if (this.evilWaveActive &&
             this.evilWaveBirdsSpawned === 4 &&
             this.enemyBigBirds.length === 0 &&
@@ -355,14 +406,14 @@ class BaseBackground {
             this.levelPassedMessageTime = this.levelPassedMessageDuration;
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
-    
+
         if (this.levelPassedMessageTime > 0) {
             this.levelPassedMessageTime -= this.game.clockTick;
             if (this.levelPassedMessageTime <= 0 && this.level === 1) {
                 this.flashTimer = this.FLASH_DURATION;
             }
         }
-    
+
         if (this.flashTimer > 0) {
             this.flashTimer -= this.game.clockTick;
             if (this.flashTimer <= 0 && this.level === 1) {
@@ -371,19 +422,20 @@ class BaseBackground {
             }
             return;
         }
-    
+
         if (this.postEvilWaveDelayTimer > 0) {
             this.postEvilWaveDelayTimer -= this.game.clockTick;
             return;
         }
-    
+
         if (!this.evilWaveActive && !this.pipeSpawnInterval) {
             this.setupPipeSpawning();
         }
-    
+
         this.updateGameObjects();
         this.handleCollisions();
     }
+
     updateGameObjects() {
         if (!this.evilWaveActive) {
             this.pipeArray.forEach(pipe => {
@@ -647,102 +699,7 @@ class BaseBackground {
         }
 
         if (this.game.gameOver) {
-            const colors = this.coinProgress.colors;
-            const panelWidth = 180;
-            const panelHeight = 160;
-            const panelX = (this.width - panelWidth) / 2;
-            const panelY = (this.height - panelHeight) / 2 - 50;
-
-            ctx.fillStyle = colors.background;
-            ctx.strokeStyle = colors.border;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(panelX + 10, panelY);
-            ctx.lineTo(panelX + panelWidth - 10, panelY);
-            ctx.quadraticCurveTo(panelX + panelWidth, panelY, panelX + panelWidth, panelY + 10);
-            ctx.lineTo(panelX + panelWidth, panelY + panelHeight - 10);
-            ctx.quadraticCurveTo(panelX + panelWidth, panelY + panelHeight, panelX + panelWidth - 10, panelY + panelHeight);
-            ctx.lineTo(panelX + 10, panelY + panelHeight);
-            ctx.quadraticCurveTo(panelX, panelY + panelHeight, panelX, panelY + panelHeight - 10);
-            ctx.lineTo(panelX, panelY + 10);
-            ctx.quadraticCurveTo(panelX, panelY, panelX + 10, panelY);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.font = '18px "Press Start 2P", monospace';
-            ctx.fillStyle = colors.title.main;
-            ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', panelX + panelWidth / 2, panelY + 30);
-
-            ctx.font = '16px "Press Start 2P", monospace';
-            ctx.fillStyle = colors.title.main;
-            ctx.fillText('SCORE', panelX + panelWidth / 2, panelY + 60);
-
-            ctx.fillStyle = colors.text;
-            ctx.font = '20px "Press Start 2P", monospace';
-            ctx.fillText(this.getBird()?.score.toString() || '0', panelX + panelWidth / 2, panelY + 90);
-
-            ctx.font = '16px "Press Start 2P", monospace';
-            ctx.fillStyle = colors.title.main;
-            ctx.fillText('BEST', panelX + panelWidth / 2, panelY + 120);
-
-            ctx.fillStyle = colors.text;
-            ctx.font = '20px "Press Start 2P", monospace';
-            const bestScore = this.scoreManager.getBestScore();
-            ctx.fillText(bestScore.toString(), panelX + panelWidth / 2, panelY + 150);
-
-            const btnWidth = 120;
-            const btnHeight = 40;
-            const btnX = (this.width - btnWidth) / 2;
-            const btnY = panelY + panelHeight + 10;
-
-            ctx.fillStyle = colors.fill.start;
-            ctx.strokeStyle = colors.border;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(btnX + 10, btnY);
-            ctx.lineTo(btnX + btnWidth - 10, btnY);
-            ctx.quadraticCurveTo(btnX + btnWidth, btnY, btnX + btnWidth, btnY + 10);
-            ctx.lineTo(btnX + btnWidth, btnY + btnHeight - 10);
-            ctx.quadraticCurveTo(btnX + btnWidth, btnY + btnHeight, btnX + btnWidth - 10, btnY + btnHeight);
-            ctx.lineTo(btnX + 10, btnY + btnHeight);
-            ctx.quadraticCurveTo(btnX, btnY + btnHeight, btnX, btnY + btnHeight - 10);
-            ctx.lineTo(btnX, btnY + 10);
-            ctx.quadraticCurveTo(btnX, btnY, btnX + 10, btnY);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.font = '16px "Press Start 2P", monospace';
-            ctx.fillStyle = colors.text;
-            ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
-
-            const returnBtnWidth = 240;
-            const returnBtnHeight = 40;
-            const returnBtnX = (this.width - returnBtnWidth) / 2;
-            const returnBtnY = btnY + btnHeight + 10;
-
-            ctx.fillStyle = colors.fill.start;
-            ctx.strokeStyle = colors.border;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(returnBtnX + 10, returnBtnY);
-            ctx.lineTo(returnBtnX + returnBtnWidth - 10, returnBtnY);
-            ctx.quadraticCurveTo(returnBtnX + returnBtnWidth, returnBtnY, returnBtnX + returnBtnWidth, returnBtnY + 10);
-            ctx.lineTo(returnBtnX + returnBtnWidth, returnBtnY + returnBtnHeight - 10);
-            ctx.quadraticCurveTo(returnBtnX + returnBtnWidth, returnBtnY + returnBtnHeight, returnBtnX + returnBtnWidth - 10, returnBtnY + returnBtnHeight);
-            ctx.lineTo(returnBtnX + 10, returnBtnY + returnBtnHeight);
-            ctx.quadraticCurveTo(returnBtnX, returnBtnY + returnBtnHeight, returnBtnX, returnBtnY + returnBtnHeight - 10);
-            ctx.lineTo(returnBtnX, returnBtnY + 10);
-            ctx.quadraticCurveTo(returnBtnX, returnBtnY, returnBtnX + 10, returnBtnY);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.font = '16px "Press Start 2P", monospace';
-            ctx.fillStyle = colors.text;
-            ctx.fillText('RETURN TO MENU', returnBtnX + returnBtnWidth / 2, returnBtnY + returnBtnHeight / 2 + 8);
+            this.drawGameOver(ctx);
         } else if (!this.gameStarted) {
             ctx.font = "24px Arial";
             ctx.fillStyle = "white";
@@ -752,5 +709,110 @@ class BaseBackground {
             ctx.strokeText("Press Space to Start", this.width / 2, this.height / 2);
             ctx.fillText("Press Space to Start", this.width / 2, this.height / 2);
         }
+    }
+
+    drawGameOver(ctx) {
+        const colors = this.coinProgress.colors;
+        const panelWidth = 180;
+        const panelHeight = 160;
+        const panelX = (this.width - panelWidth) / 2;
+        const panelY = (this.height - panelHeight) / 2 - 50;
+
+        // Draw main panel background
+        ctx.fillStyle = colors.background;
+        ctx.strokeStyle = colors.border;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(panelX + 10, panelY);
+        ctx.lineTo(panelX + panelWidth - 10, panelY);
+        ctx.quadraticCurveTo(panelX + panelWidth, panelY, panelX + panelWidth, panelY + 10);
+        ctx.lineTo(panelX + panelWidth, panelY + panelHeight - 10);
+        ctx.quadraticCurveTo(panelX + panelWidth, panelY + panelHeight, panelX + panelWidth - 10, panelY + panelHeight);
+        ctx.lineTo(panelX + 10, panelY + panelHeight);
+        ctx.quadraticCurveTo(panelX, panelY + panelHeight, panelX, panelY + panelHeight - 10);
+        ctx.lineTo(panelX, panelY + 10);
+        ctx.quadraticCurveTo(panelX, panelY, panelX + 10, panelY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw Game Over text
+        ctx.font = '18px "Press Start 2P", monospace';
+        ctx.fillStyle = colors.title.main;
+        ctx.textAlign = 'center';
+        ctx.fillText('GAME OVER', panelX + panelWidth / 2, panelY + 30);
+
+        // Draw Score section
+        ctx.font = '16px "Press Start 2P", monospace';
+        ctx.fillStyle = colors.title.main;
+        ctx.fillText('SCORE', panelX + panelWidth / 2, panelY + 60);
+
+        ctx.fillStyle = colors.text;
+        ctx.font = '20px "Press Start 2P", monospace';
+        ctx.fillText(this.getBird()?.score.toString() || '0', panelX + panelWidth / 2, panelY + 90);
+
+        // Draw Best Score section
+        ctx.font = '16px "Press Start 2P", monospace';
+        ctx.fillStyle = colors.title.main;
+        ctx.fillText('BEST', panelX + panelWidth / 2, panelY + 120);
+
+        ctx.fillStyle = colors.text;
+        ctx.font = '20px "Press Start 2P", monospace';
+        const bestScore = this.scoreManager.getBestScore();
+        ctx.fillText(bestScore.toString(), panelX + panelWidth / 2, panelY + 150);
+
+        // Draw Restart button
+        const btnWidth = 120;
+        const btnHeight = 40;
+        const btnX = (this.width - btnWidth) / 2;
+        const btnY = panelY + panelHeight + 10;
+
+        ctx.fillStyle = colors.fill.start;
+        ctx.strokeStyle = colors.border;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(btnX + 10, btnY);
+        ctx.lineTo(btnX + btnWidth - 10, btnY);
+        ctx.quadraticCurveTo(btnX + btnWidth, btnY, btnX + btnWidth, btnY + 10);
+        ctx.lineTo(btnX + btnWidth, btnY + btnHeight - 10);
+        ctx.quadraticCurveTo(btnX + btnWidth, btnY + btnHeight, btnX + btnWidth - 10, btnY + btnHeight);
+        ctx.lineTo(btnX + 10, btnY + btnHeight);
+        ctx.quadraticCurveTo(btnX, btnY + btnHeight, btnX, btnY + btnHeight - 10);
+        ctx.lineTo(btnX, btnY + 10);
+        ctx.quadraticCurveTo(btnX, btnY, btnX + 10, btnY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '16px "Press Start 2P", monospace';
+        ctx.fillStyle = colors.text;
+        ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
+
+        // Draw Return to Menu button
+        const returnBtnWidth = 240;
+        const returnBtnHeight = 40;
+        const returnBtnX = (this.width - returnBtnWidth) / 2;
+        const returnBtnY = btnY + btnHeight + 10;
+
+        ctx.fillStyle = colors.fill.start;
+        ctx.strokeStyle = colors.border;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(returnBtnX + 10, returnBtnY);
+        ctx.lineTo(returnBtnX + returnBtnWidth - 10, returnBtnY);
+        ctx.quadraticCurveTo(returnBtnX + returnBtnWidth, returnBtnY, returnBtnX + returnBtnWidth, returnBtnY + 10);
+        ctx.lineTo(returnBtnX + returnBtnWidth, returnBtnY + returnBtnHeight - 10);
+        ctx.quadraticCurveTo(returnBtnX + returnBtnWidth, returnBtnY + returnBtnHeight, returnBtnX + returnBtnWidth - 10, returnBtnY + returnBtnHeight);
+        ctx.lineTo(returnBtnX + 10, returnBtnY + returnBtnHeight);
+        ctx.quadraticCurveTo(returnBtnX, returnBtnY + returnBtnHeight, returnBtnX, returnBtnY + returnBtnHeight - 10);
+        ctx.lineTo(returnBtnX, returnBtnY + 10);
+        ctx.quadraticCurveTo(returnBtnX, returnBtnY, returnBtnX + 10, returnBtnY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '16px "Press Start 2P", monospace';
+        ctx.fillStyle = colors.text;
+        ctx.fillText('RETURN TO MENU', returnBtnX + returnBtnWidth / 2, returnBtnY + returnBtnHeight / 2 + 8);
     }
 }
