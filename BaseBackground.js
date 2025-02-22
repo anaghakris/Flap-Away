@@ -175,19 +175,13 @@ class BaseBackground {
     spawnPipePair() {
         if (!this.gameStarted || this.game.gameOver || this.evilWaveActive || this.postEvilWaveDelayTimer > 0)
             return;
-
-        //const opening = this.minOpening + Math.random() * (this.maxOpening - this.minOpening);
-
-        // consider non snap and snap
-        const hasSnappingPlant = this.pipePairCount % 2 === 0; 
+        const hasSnappingPlant = this.pipePairCount % 2 === 0;
         let minOpening = hasSnappingPlant ? this.minOpeningSnapping : this.minOpeningRegular;
         let maxOpening = hasSnappingPlant ? this.maxOpeningSnapping : this.maxOpeningRegular;
         const opening = minOpening + Math.random() * (maxOpening - minOpening);
-
         const minTopPipeHeight = 50;
         const maxTopPipeHeight = this.baseY - opening - 100;
         const topPipeHeight = minTopPipeHeight + Math.random() * (maxTopPipeHeight - minTopPipeHeight);
-
         const topPipe = {
             x: this.width,
             y: 0,
@@ -200,7 +194,6 @@ class BaseBackground {
             originalTopHeight: topPipeHeight,
             originalOpening: opening
         };
-
         const bottomPipe = {
             x: this.width,
             y: topPipeHeight + opening,
@@ -212,20 +205,15 @@ class BaseBackground {
             movingTime: 0,
             originalY: topPipeHeight + opening
         };
-
         this.pipeArray.push(topPipe, bottomPipe);
-
-        // Spawn coin
         const minDistanceFromPipe = 100;
         const coinX = topPipe.x + this.pipeWidth + minDistanceFromPipe + Math.random() * this.pipeWidth;
         const maxY = this.baseY - 50;
         const minY = 50;
         const coinY = minY + Math.random() * (maxY - minY);
         this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed, this.coinSound));
-
-        // Add snapping plant
         const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
-        if (this.pipePairCount % 2 === 0) {
+        if (this.level === 2 || this.pipePairCount % 2 === 0) {
             if (Math.random() < 0.5) {
                 const topPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
                 const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 20;
@@ -252,15 +240,13 @@ class BaseBackground {
                 bottomPipe.hasPlant = true;
             }
         }
-
         this.pipePairCount++;
-
         if (!this.evilWaveTriggered && this.pipePairCount === this.EVIL_WAVE_PIPE_COUNT) {
             this.triggerEvilWave();
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
     }
-
+    
     spawnEnemyBigBird() {
         const enemyWidth = this.BIRD_WIDTH * 3;
         const enemyHeight = this.BIRD_HEIGHT * 2;
