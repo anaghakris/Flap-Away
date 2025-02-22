@@ -7,7 +7,7 @@ class Background extends BaseBackground {
             topPipe: "./Sprites/Pipes/bottom pipe.png"
         };
         super(game, 1, assets);
-        this.coinProgress = new CoinProgress(game, 800, 2);
+        this.coinProgress = new CoinProgress(game, 800, 8);
         this.levelTitleAnimation = {
             active: false,
             timer: 0,
