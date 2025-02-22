@@ -144,6 +144,14 @@ class BaseBackground {
         this.levelPassedMessageTime = 0;
         this.postEvilWaveDelayTimer = 0;
         this.flashTimer = 0;
+
+        // When resetting in level 2, force the bird's score to 25.
+        if (this.level === 2) {
+            let bird = this.getBird();
+            if (bird) {
+                bird.score = 25;
+            }
+        }
     }
 
     startGame() {

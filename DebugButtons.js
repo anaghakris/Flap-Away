@@ -10,7 +10,6 @@ class DebugButtons {
             console.error('Debug buttons container not found');
             return;
         }
-
         buttonsContainer.style.position = 'fixed';
         buttonsContainer.style.bottom = '20px';
         buttonsContainer.style.left = '50%';
@@ -18,15 +17,12 @@ class DebugButtons {
         buttonsContainer.style.display = 'flex';
         buttonsContainer.style.gap = '16px';
         buttonsContainer.style.zIndex = '1000';
-
         const level1Button = this.createButton('Level 1', '#3B82F6', () => {
             this.switchToLevel(1);
         });
-
         const level2Button = this.createButton('Level 2', '#8B5CF6', () => {
             this.switchToLevel(2);
         });
-
         buttonsContainer.appendChild(level1Button);
         buttonsContainer.appendChild(level2Button);
     }
@@ -43,14 +39,12 @@ class DebugButtons {
         button.style.fontFamily = '"Press Start 2P", monospace';
         button.style.fontSize = '14px';
         button.style.transition = 'background-color 0.2s';
-
         button.addEventListener('mouseover', () => {
             button.style.backgroundColor = this.adjustColor(backgroundColor, -20);
         });
         button.addEventListener('mouseout', () => {
             button.style.backgroundColor = backgroundColor;
         });
-
         button.addEventListener('click', onClick);
         return button;
     }
@@ -61,33 +55,28 @@ class DebugButtons {
             console.error('Background entity not found');
             return;
         }
-    
-        background.reset();  
+        background.reset();
         background.level = level;
-    
         if (level === 2) {
             background.image = ASSET_MANAGER.getAsset("./Sprites/Background/NightCity.png");
             background.base = ASSET_MANAGER.getAsset("./Sprites/Background/base_night.png");
             background.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
             background.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/night_pipe.png");
-    
             background.pipeArray = [];
             background.snappingPlants = [];
             background.coins = [];
             background.enemyBigBirds = [];
-    
             background.pipePairCount = 0;
             background.evilWaveTriggered = false;
             background.coinProgress = new CoinProgress(this.gameEngine, 800, 15);
-    
             if (!background.pipeSpawnInterval) {
                 background.setupPipeSpawning();
             }
-    
             let bird = this.gameEngine.entities.find(entity => entity instanceof Bird);
             if (bird) {
                 bird.changeSpriteSheet(ASSET_MANAGER.getAsset("./Sprites/Bird/bluebird_sprite_sheet.png"));
-                bird.reset(); 
+                bird.reset();
+                bird.score = 25;
             }
         } else if (level === 1) {
             background.image = ASSET_MANAGER.getAsset("./Sprites/Background/Daytime.png");
@@ -95,18 +84,15 @@ class DebugButtons {
             background.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
             background.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/bottom pipe.png");
             background.coinProgress = new CoinProgress(this.gameEngine, 800, 8);
-    
             let bird = this.gameEngine.entities.find(entity => entity instanceof Bird);
             if (bird) {
                 bird.changeSpriteSheet(ASSET_MANAGER.getAsset("./Sprites/Bird/yellowbird-sprite-sheet.png"));
-                bird.reset(); 
+                bird.reset();
             }
         }
-    
         this.gameEngine.gameOver = false;
         this.gameEngine.hasCollided = false;
     }
-    
 
     adjustColor(color, amount) {
         const hex = color.replace('#', '');
