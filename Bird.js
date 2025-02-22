@@ -221,7 +221,7 @@ class Bird {
         ctx.translate(this.x + 34 / 2, this.y + 70 / 2);
         ctx.rotate(this.rotation);
         ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2));
-        const scale = 0.6;
+        const scale = 0.53;
     
         const centerX = this.x + (34 * scale);  
         const centerY = this.y + (35 * scale); 
