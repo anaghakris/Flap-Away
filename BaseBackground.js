@@ -49,10 +49,10 @@ class BaseBackground {
         this.pipeInterval = 2000;
 
         // snap and non snap
-        this.minOpeningRegular = 100;  
-        this.maxOpeningRegular = 120;
-        this.minOpeningSnapping = 130; 
-        this.maxOpeningSnapping = 200;
+        this.minOpeningRegular = 140;  //100
+        this.maxOpeningRegular = 200;  //200
+        this.minOpeningSnapping = 140; //130
+        this.maxOpeningSnapping = 200; //200
 
         // old code
         // this.minOpening = 140;
