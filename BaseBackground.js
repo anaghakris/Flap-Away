@@ -391,47 +391,46 @@ class BaseBackground {
 
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
-
+    
         if (this.dangerDisplayTime > 0) {
             this.dangerDisplayTime -= this.game.clockTick;
         }
-
-    this.updateEnemyBirds();
-
+    
+        this.updateEnemyBirds();
+    
         if (this.evilWaveActive &&
-            this.evilWaveBirdsSpawned === 4 &&
+            this.evilWaveBirdsSpawned >= 8 &&  
             this.enemyBigBirds.length === 0 &&
             this.dangerDisplayTime <= 0) {
             this.evilWaveActive = false;
             this.levelPassedMessageTime = this.levelPassedMessageDuration;
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
-
+    
         if (this.levelPassedMessageTime > 0) {
             this.levelPassedMessageTime -= this.game.clockTick;
             if (this.levelPassedMessageTime <= 0 && this.level === 1) {
                 this.flashTimer = this.FLASH_DURATION;
             }
         }
-
+    
         if (this.flashTimer > 0) {
             this.flashTimer -= this.game.clockTick;
             if (this.flashTimer <= 0 && this.level === 1) {
                 this.transitionToLevel2();
                 return;
             }
-            return;
         }
-
+    
         if (this.postEvilWaveDelayTimer > 0) {
             this.postEvilWaveDelayTimer -= this.game.clockTick;
             return;
         }
-
+    
         if (!this.evilWaveActive && !this.pipeSpawnInterval) {
             this.setupPipeSpawning();
         }
-
+    
         this.updateGameObjects();
         this.handleCollisions();
     }
