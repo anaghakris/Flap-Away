@@ -47,8 +47,16 @@ class BaseBackground {
         this.pipeSpeed = 5;
         this.pipeSpacing = 200;
         this.pipeInterval = 2000;
-        this.minOpening = 140;
-        this.maxOpening = 200;
+
+        // snap and non snap
+        this.minOpeningRegular = 100;  
+        this.maxOpeningRegular = 120;
+        this.minOpeningSnapping = 130; 
+        this.maxOpeningSnapping = 200;
+
+        // old code
+        // this.minOpening = 140;
+        // this.maxOpening = 200;
 
         this.snappingPlantFrameWidth = 158;
         this.snappingPlantFrameHeight = 250;
@@ -168,7 +176,14 @@ class BaseBackground {
         if (!this.gameStarted || this.game.gameOver || this.evilWaveActive || this.postEvilWaveDelayTimer > 0)
             return;
 
-        const opening = this.minOpening + Math.random() * (this.maxOpening - this.minOpening);
+        //const opening = this.minOpening + Math.random() * (this.maxOpening - this.minOpening);
+
+        // consider non snap and snap
+        const hasSnappingPlant = this.pipePairCount % 2 === 0; 
+        let minOpening = hasSnappingPlant ? this.minOpeningSnapping : this.minOpeningRegular;
+        let maxOpening = hasSnappingPlant ? this.maxOpeningSnapping : this.maxOpeningRegular;
+        const opening = minOpening + Math.random() * (maxOpening - minOpening);
+
         const minTopPipeHeight = 50;
         const maxTopPipeHeight = this.baseY - opening - 100;
         const topPipeHeight = minTopPipeHeight + Math.random() * (maxTopPipeHeight - minTopPipeHeight);
