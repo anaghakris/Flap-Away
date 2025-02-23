@@ -7,8 +7,8 @@ class BaseBackground {
         this.base = ASSET_MANAGER.getAsset(assets.base);
         this.pipeSprite = ASSET_MANAGER.getAsset(assets.pipe);
         this.topPipeSprite = ASSET_MANAGER.getAsset(assets.topPipe);
-        this.coin = ASSET_MANAGER.getAsset("./Sprites/Background/coin.png");
-        
+        this.coin = ASSET_MANAGER.getAsset(assets.background);
+
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
         this.enemyBigBirdSprite = ASSET_MANAGER.getAsset("./Sprites/Bird/evil_bird.png");
@@ -19,6 +19,8 @@ class BaseBackground {
         
         this.coinProgress = new CoinProgress(game, this.width, level === 1 ? 2 : 8);
         this.scoreManager = new ScoreManager(this.game);
+
+        this.health = 3; // Health system: start with 3 hearts
     }
 
     setupSounds() {
@@ -142,6 +144,9 @@ class BaseBackground {
         this.levelPassedMessageTime = 0;
         this.postEvilWaveDelayTimer = 0;
         this.flashTimer = 0;
+
+        // Reset health to 3 hearts on restart
+        this.health = 3;
 
         if (this.level === 2) {
             let bird = this.getBird();
@@ -300,7 +305,7 @@ class BaseBackground {
                 this.evilWaveActive = false;
                 this.levelPassedMessageTime = this.levelPassedMessageDuration;
                 this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
-            }, 2000); // Duration of empty phase before showing level complete
+            }, 2000);
         }
     }
 
@@ -328,7 +333,6 @@ class BaseBackground {
             targetY = playerY;
             verticalSpeed = (targetY - y) / 60; 
         } else if (attackPattern < 0.7) {
-            // Top or bottom ambush
             if (playerY < this.height / 2) {
                 y = zones.BOTTOM;
                 targetY = zones.TOP;
@@ -383,16 +387,14 @@ class BaseBackground {
     
             const distanceToTarget = bird.targetY - bird.y;
             bird.verticalSpeed += Math.sign(distanceToTarget) * bird.accelerationY;
-            
             bird.verticalSpeed = Math.min(Math.max(bird.verticalSpeed, -bird.maxSpeed), bird.maxSpeed);
-            
             bird.y += bird.verticalSpeed;
             
             const minY = 50;
             const maxY = this.baseY - bird.height - 50;
             if (bird.y < minY || bird.y > maxY) {
                 bird.y = bird.y < minY ? minY : maxY;
-                bird.verticalSpeed *= -0.5; 
+                bird.verticalSpeed *= -0.5;
             }
         }
     }
@@ -606,16 +608,41 @@ class BaseBackground {
             this.swooshSound.currentTime = 0;
             this.swooshSound.play();
         }
-        this.game.gameOver = true;
-        this.game.hasCollided = true;
-        bird.velocity = 0;
-        bird.rotation = bird.maxRotationDown;
-        this.scoreManager.updateBestScore(bird.score);
+        // Lose one heart and grant temporary invincibility before game over.
+        if (!bird.invincible) {
+            if (this.health > 0) {
+                this.health--;
+                bird.invincible = true;
+                bird.invincibleTimer = 2; // 2 seconds of invincibility
+            }
+            if (this.health <= 0) {
+                this.game.gameOver = true;
+                this.game.hasCollided = true;
+                bird.velocity = 0;
+                bird.rotation = bird.maxRotationDown;
+                this.scoreManager.updateBestScore(bird.score);
+            }
+        }
     }
 
     getBird() {
         return this.game.entities.find(entity => entity instanceof Bird) || null;
     }
+
+    drawHearts(ctx) {
+        // Increase the font size for bigger hearts
+        ctx.font = "40px Arial";
+        ctx.fillStyle = "red";
+        const heartSpacing = 50; // Adjust spacing between hearts as needed
+    
+        // Draw hearts starting from the right side
+        for (let i = 0; i < this.health; i++) {
+            // Calculate x so that hearts are drawn from right to left
+            const x = this.width - heartSpacing * (i + 1);
+            ctx.fillText("♥", x, 50); // y-position can be adjusted to your preference
+        }
+    }
+    
 
     draw(ctx) {
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
@@ -670,8 +697,8 @@ class BaseBackground {
         });
 
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
-
         this.coinProgress.draw(ctx);
+        this.drawHearts(ctx);
 
         if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted) {
             const alpha = Math.min(1, this.levelPassedMessageTime * 2);
@@ -725,7 +752,6 @@ class BaseBackground {
         const panelX = (this.width - panelWidth) / 2;
         const panelY = (this.height - panelHeight) / 2 - 50;
 
-        // Draw main panel background
         ctx.fillStyle = colors.background;
         ctx.strokeStyle = colors.border;
         ctx.lineWidth = 4;
@@ -743,13 +769,11 @@ class BaseBackground {
         ctx.fill();
         ctx.stroke();
 
-        // Draw Game Over text
         ctx.font = '18px "Press Start 2P", monospace';
         ctx.fillStyle = colors.title.main;
         ctx.textAlign = 'center';
         ctx.fillText('GAME OVER', panelX + panelWidth / 2, panelY + 30);
 
-        // Draw Score section
         ctx.font = '16px "Press Start 2P", monospace';
         ctx.fillStyle = colors.title.main;
         ctx.fillText('SCORE', panelX + panelWidth / 2, panelY + 60);
@@ -758,7 +782,6 @@ class BaseBackground {
         ctx.font = '20px "Press Start 2P", monospace';
         ctx.fillText(this.getBird()?.score.toString() || '0', panelX + panelWidth / 2, panelY + 90);
 
-        // Draw Best Score section
         ctx.font = '16px "Press Start 2P", monospace';
         ctx.fillStyle = colors.title.main;
         ctx.fillText('BEST', panelX + panelWidth / 2, panelY + 120);
@@ -768,7 +791,6 @@ class BaseBackground {
         const bestScore = this.scoreManager.getBestScore();
         ctx.fillText(bestScore.toString(), panelX + panelWidth / 2, panelY + 150);
 
-        // Draw Restart button
         const btnWidth = 120;
         const btnHeight = 40;
         const btnX = (this.width - btnWidth) / 2;
@@ -795,7 +817,6 @@ class BaseBackground {
         ctx.fillStyle = colors.text;
         ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
 
-        // Draw Return to Menu button
         const returnBtnWidth = 240;
         const returnBtnHeight = 40;
         const returnBtnX = (this.width - returnBtnWidth) / 2;
