@@ -104,6 +104,9 @@ class BaseBackground {
         this.postEvilWaveDelayTimer = 0;
         this.flashTimer = 0;
         this.FLASH_DURATION = 1.0;
+        
+        // Add timeout tracker array for evil wave
+        this.evilWaveTimeouts = [];
 
         this.setupPipeSpawning();
     }
@@ -118,6 +121,12 @@ class BaseBackground {
     }
 
     reset() {
+        // Clear any pending evil wave timeouts
+        if (this.evilWaveTimeouts) {
+            this.evilWaveTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+            this.evilWaveTimeouts = [];
+        }
+
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
@@ -274,6 +283,12 @@ class BaseBackground {
     }
 
     triggerEvilWave() {
+        // Clear any previous evil wave timeouts
+        if (this.evilWaveTimeouts) {
+            this.evilWaveTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
+            this.evilWaveTimeouts = [];
+        }
+
         this.evilWaveActive = true;
         this.evilWaveTriggered = true;
         this.pipeArray = [];
@@ -291,11 +306,12 @@ class BaseBackground {
             const spawnNextBird = () => {
                 if (this.evilWaveBirdsSpawned < 8) {
                     const randomDelay = 800 + Math.random() * 400;
-                    setTimeout(() => {
+                    const timerId = setTimeout(() => {
                         this.spawnEnemyBigBird();
                         this.evilWaveBirdsSpawned++;
                         spawnNextBird();
                     }, randomDelay);
+                    this.evilWaveTimeouts.push(timerId);
                 }
             };
             spawnNextBird();
