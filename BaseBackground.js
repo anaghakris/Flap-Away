@@ -268,6 +268,42 @@ class BaseBackground {
         }
     }
 
+    triggerEvilWave() {
+        this.evilWaveActive = true;
+        this.evilWaveTriggered = true;
+        this.pipeArray = [];
+        this.snappingPlants = [];
+        this.coins = [];
+        clearInterval(this.pipeSpawnInterval);
+        this.pipeSpawnInterval = null;
+
+        // Only spawn birds if it's not level 2
+        if (this.level !== 2) {
+            this.evilWaveBirdsSpawned = 0;
+            this.spawnEnemyBigBird();
+            this.evilWaveBirdsSpawned++;
+            
+            const spawnNextBird = () => {
+                if (this.evilWaveBirdsSpawned < 8) {
+                    const randomDelay = 800 + Math.random() * 400;
+                    setTimeout(() => {
+                        this.spawnEnemyBigBird();
+                        this.evilWaveBirdsSpawned++;
+                        spawnNextBird();
+                    }, randomDelay);
+                }
+            };
+            spawnNextBird();
+        } else {
+            // For level 2, just show the empty phase without birds
+            setTimeout(() => {
+                this.evilWaveActive = false;
+                this.levelPassedMessageTime = this.levelPassedMessageDuration;
+                this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
+            }, 2000); // Duration of empty phase before showing level complete
+        }
+    }
+
     spawnEnemyBigBird() {
         const enemyWidth = this.BIRD_WIDTH * 3;
         const enemyHeight = this.BIRD_HEIGHT * 2;
@@ -332,34 +368,6 @@ class BaseBackground {
         
         this.enemyBigBirds.push(enemyBigBird);
         this.dangerDisplayTime = this.DANGER_DURATION;
-    }
-    
-
-    triggerEvilWave() {
-        this.evilWaveActive = true;
-        this.evilWaveTriggered = true;
-        this.pipeArray = [];
-        this.snappingPlants = [];
-        this.coins = [];
-        clearInterval(this.pipeSpawnInterval);
-        this.pipeSpawnInterval = null;
-        this.evilWaveBirdsSpawned = 0;
-        
-        this.spawnEnemyBigBird();
-        this.evilWaveBirdsSpawned++;
-        
-        const spawnNextBird = () => {
-            if (this.evilWaveBirdsSpawned < 8) {
-                const randomDelay = 800 + Math.random() * 400;
-                setTimeout(() => {
-                    this.spawnEnemyBigBird();
-                    this.evilWaveBirdsSpawned++;
-                    spawnNextBird();
-                }, randomDelay);
-            }
-        };
-        
-        spawnNextBird();
     }
 
     updateEnemyBirds() {
