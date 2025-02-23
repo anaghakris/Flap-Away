@@ -8,6 +8,8 @@ class BaseBackground {
         this.pipeSprite = ASSET_MANAGER.getAsset(assets.pipe);
         this.topPipeSprite = ASSET_MANAGER.getAsset(assets.topPipe);
         this.coin = ASSET_MANAGER.getAsset(assets.background);
+        this.heartDisplay = new HeartDisplay(game);
+
 
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
@@ -127,6 +129,8 @@ class BaseBackground {
     }
 
     reset() {
+        this.health = 3;
+
         // Clear chance message to avoid glitch on restart
         this.chanceMessage = "";
         this.chanceMessageTimer = 0;
@@ -163,9 +167,6 @@ class BaseBackground {
         this.levelPassedMessageTime = 0;
         this.postEvilWaveDelayTimer = 0;
         this.flashTimer = 0;
-
-        // Reset health to 3 hearts on restart
-        this.health = 3;
 
         if (this.level === 2) {
             let bird = this.getBird();
@@ -687,14 +688,13 @@ class BaseBackground {
     }
 
     drawHearts(ctx) {
-        ctx.font = "40px Arial";
-        ctx.fillStyle = "red";
-        const heartSpacing = 50; // spacing between hearts
-        const heartsY = 85;      // y-position beneath coin tracker
-        for (let i = 0; i < this.health; i++) {
-            // Draw hearts from the left side with a small left margin (e.g., 10 pixels)
-            const x = heartSpacing * i + 45;
-            ctx.fillText("♥", x, heartsY);
+        this.heartDisplay.draw(ctx, this.health);
+        
+        if (this.chanceMessageTimer > 0) {
+            ctx.font = "24px Arial";
+            ctx.fillStyle = "red";
+            ctx.textAlign = "center";
+            ctx.fillText(this.chanceMessage, this.width / 2, 120);
         }
     }
     
@@ -756,7 +756,7 @@ class BaseBackground {
 
         if (this.chanceMessageTimer > 0) {
             ctx.font = "24px Arial";
-            ctx.fillStyle = "red";  // Changed to red as requested
+            ctx.fillStyle = "red";  
             ctx.textAlign = "center";
             ctx.fillText(this.chanceMessage, this.width / 2, 120);
         }
