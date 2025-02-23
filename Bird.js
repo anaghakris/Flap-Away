@@ -16,7 +16,6 @@ class Bird {
         this.gameStarted = false;
         this.smoothingFactor = 0.15;
         this.isFlapping = true;
-
         this.flapSound = ASSET_MANAGER.getAsset("./audio/sfx_wing.wav");
         this.dieSound = ASSET_MANAGER.getAsset("./audio/sfx_die.wav");
         this.powerUpSound = ASSET_MANAGER.getAsset("./audio/powerup.wav");
@@ -24,17 +23,13 @@ class Bird {
         this.hasPlayedDieSound = false;
         this.lastFlapTime = 0;
         this.flapCooldown = 250;
-
         this.score = 0;
-
         this.BIRD_WIDTH = 50 * 0.6;
         this.BIRD_HEIGHT = 50 * 0.6;
         this.BIRD_X_OFFSET = 5;
         this.BIRD_Y_OFFSET = 5;
-
         this.invincible = false;
         this.invincibleTimer = 0;
-        
         this.invincibleEffects = {
             glowRadius: 40,
             glowOpacity: 0.6,
@@ -44,7 +39,6 @@ class Bird {
             maxTrailPoints: 10,
             rainbowHue: 0
         };
-
         this.powerUpAnimation = {
             active: false,
             duration: 2,
@@ -56,6 +50,32 @@ class Bird {
             showFlash: false,
             textY: -50
         };
+        this.projectiles = [];
+    }
+
+    shoot(targetX, targetY) {
+        const centerX = this.x + 34 * 0.6;
+        const centerY = this.y + 70 * 0.6;
+        const dx = targetX - centerX;
+        const dy = targetY - centerY;
+        const angle = Math.atan2(dy, dx);
+        const speed = 10;
+        const projectile = {
+            x: centerX,
+            y: centerY,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            radius: 5,
+            life: 2
+        };
+        this.projectiles.push(projectile);
+    }
+
+    handleClick(x, y) {
+        const background = this.game.entities.find(e => e instanceof BaseBackground);
+        if (background && background.level === 2) {
+            this.shoot(x, y);
+        }
     }
 
     reset() {
@@ -72,7 +92,7 @@ class Bird {
         this.invincible = false;
         this.invincibleTimer = 0;
         this.powerUpAnimation.active = false;
-        
+        this.projectiles = [];
         if (this.powerSoundLoop) {
             this.powerSoundLoop.pause();
             this.powerSoundLoop = null;
@@ -88,12 +108,10 @@ class Bird {
         this.invincibleTimer = 10;
         this.powerUpAnimation.active = true;
         this.powerUpAnimation.timer = 0;
-        
         if (this.powerSoundLoop) {
             this.powerSoundLoop.pause();
             this.powerSoundLoop = null;
         }
-        
         if (this.powerUpSound) {
             this.powerSoundLoop = this.powerUpSound.cloneNode();
             this.powerSoundLoop.volume = 0.3;
@@ -112,7 +130,6 @@ class Bird {
                     this.invincible = false;
                     this.invincibleTimer = 0;
                     this.powerUpAnimation.active = false;
-
                     if (this.powerSoundLoop) {
                         this.powerSoundLoop.pause();
                         this.powerSoundLoop = null;
@@ -124,23 +141,18 @@ class Bird {
         if (this.powerUpAnimation.active) {
             if (!this.game.gameOver) {
                 this.powerUpAnimation.timer += this.game.clockTick;
-
                 if (this.powerUpAnimation.timer <= 0.5) {
                     this.powerUpAnimation.scale = this.powerUpAnimation.timer * 2;
                     this.powerUpAnimation.opacity = this.powerUpAnimation.timer * 2;
-                }
-                else if (this.powerUpAnimation.timer <= 1.5) {
+                } else if (this.powerUpAnimation.timer <= 1.5) {
                     this.powerUpAnimation.scale = 1;
                     this.powerUpAnimation.opacity = 1;
-                }
-                else if (this.powerUpAnimation.timer <= 2) {
+                } else if (this.powerUpAnimation.timer <= 2) {
                     const fadeProgress = (this.powerUpAnimation.timer - 1.5) * 2;
                     this.powerUpAnimation.opacity = 1 - fadeProgress;
-                }
-                else {
+                } else {
                     this.powerUpAnimation.active = false;
                 }
-
                 this.powerUpAnimation.flashTimer += this.game.clockTick;
                 if (this.powerUpAnimation.flashTimer >= this.powerUpAnimation.flashDuration) {
                     this.powerUpAnimation.showFlash = !this.powerUpAnimation.showFlash;
@@ -154,24 +166,22 @@ class Bird {
                 this.powerSoundLoop.pause();
                 this.powerSoundLoop = null;
             }
-
             this.velocity += this.gravity;
             this.y += this.velocity;
             this.rotation = this.maxRotationDown;
             this.isFlapping = false;
-
-            if (!this.hasPlayedDieSound && !this.game.hasCollided) { 
+            if (!this.hasPlayedDieSound && !this.game.hasCollided) {
                 if (this.dieSound) {
                     this.dieSound.currentTime = 0;
                     this.dieSound.play();
                     this.hasPlayedDieSound = true;
                 }
             }
-
             if (this.y > 565 - 70) {
                 this.y = 565 - 70;
                 this.velocity = 0;
             }
+            this.updateProjectiles();
             return;
         }
 
@@ -181,18 +191,15 @@ class Bird {
 
         if (this.game.keys[" "]) {
             this.velocity = this.lift;
-
             const currentTime = Date.now();
             if (currentTime - this.lastFlapTime >= this.flapCooldown) {
                 if (this.flapSound) {
                     this.flapSound.pause();
                     this.flapSound.currentTime = 0;
-
                     const flapSoundClone = this.flapSound.cloneNode();
                     flapSoundClone.volume = 0.5;
                     flapSoundClone.play().catch(e => console.log("Audio play failed:", e));
                 }
-
                 this.lastFlapTime = currentTime;
             }
         }
@@ -200,7 +207,6 @@ class Bird {
         const targetRotation = this.velocity > 0
             ? Math.min(this.maxRotationDown, this.velocity / 8)
             : Math.max(this.maxRotationUp, this.velocity / 8);
-
         this.rotation += (targetRotation - this.rotation) * this.smoothingFactor;
 
         if (this.y < 0) this.y = 0;
@@ -210,28 +216,38 @@ class Bird {
             this.rotation = this.maxRotationDown;
             this.game.gameOver = true;
         }
+
+        this.updateProjectiles();
     }
 
-    draw(ctx) {   
+    updateProjectiles() {
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            const proj = this.projectiles[i];
+            proj.x += proj.vx;
+            proj.y += proj.vy;
+            proj.life -= this.game.clockTick;
+            if (proj.life <= 0) {
+                this.projectiles.splice(i, 1);
+            }
+        }
+    }
+
+    draw(ctx) {
         if (this.invincible) {
             this.drawPowerBoostEffects(ctx);
         }
-    
         ctx.save();
         ctx.translate(this.x + 34 / 2, this.y + 70 / 2);
         ctx.rotate(this.rotation);
         ctx.translate(-(this.x + 34 / 2), -(this.y + 70 / 2));
         const scale = 0.53;
-    
-        const centerX = this.x + (34 * scale);  
-        const centerY = this.y + (35 * scale); 
-        const radius = 10; 
-    
+        const centerX = this.x + (34 * scale);
+        const centerY = this.y + (35 * scale);
+        const radius = 10;
         ctx.beginPath();
         ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(147, 0, 255, 0.3)'; 
+        ctx.strokeStyle = 'rgba(147, 0, 255, 0.3)';
         ctx.stroke();
-    
         if (this.isFlapping) {
             if (this.invincible) {
                 ctx.shadowColor = `hsla(${this.invincibleEffects.rainbowHue}, 100%, 50%, 0.8)`;
@@ -251,15 +267,12 @@ class Bird {
             );
         }
         ctx.restore();
-
-    
         ctx.font = "30px Arial";
         ctx.fillStyle = "white";
         ctx.strokeStyle = "black";
         ctx.lineWidth = 3;
         ctx.strokeText(this.score.toString(), 400, 50);
         ctx.fillText(this.score.toString(), 400, 50);
-    
         if (this.invincible) {
             ctx.font = "20px Arial";
             ctx.fillStyle = "white";
@@ -268,31 +281,33 @@ class Bird {
             ctx.strokeText(`Power: ${Math.ceil(this.invincibleTimer)}s`, 400, 80);
             ctx.fillText(`Power: ${Math.ceil(this.invincibleTimer)}s`, 400, 80);
         }
+        // Draw projectiles
+        for (let proj of this.projectiles) {
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'yellow';
+            ctx.fill();
+        }
     }
 
     drawPowerBoostEffects(ctx) {
         const birdCenterX = this.x + 34 * 0.6;
         const birdCenterY = this.y + 70 * 0.6;
-
         this.invincibleEffects.rainbowHue = (this.invincibleEffects.rainbowHue + 2) % 360;
-
         const gradient = ctx.createRadialGradient(
             birdCenterX, birdCenterY, 10,
             birdCenterX, birdCenterY, this.invincibleEffects.glowRadius
         );
         gradient.addColorStop(0, `hsla(${this.invincibleEffects.rainbowHue}, 100%, 50%, ${this.invincibleEffects.glowOpacity})`);
         gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        
         ctx.beginPath();
         ctx.arc(birdCenterX, birdCenterY, this.invincibleEffects.glowRadius, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
-
         this.invincibleEffects.trailPoints.unshift({ x: birdCenterX, y: birdCenterY });
         if (this.invincibleEffects.trailPoints.length > this.invincibleEffects.maxTrailPoints) {
             this.invincibleEffects.trailPoints.pop();
         }
-
         ctx.beginPath();
         ctx.moveTo(this.invincibleEffects.trailPoints[0].x, this.invincibleEffects.trailPoints[0].y);
         for (let i = 1; i < this.invincibleEffects.trailPoints.length; i++) {
@@ -302,7 +317,6 @@ class Bird {
         ctx.strokeStyle = `hsla(${(this.invincibleEffects.rainbowHue + 180) % 360}, 100%, 50%, 0.5)`;
         ctx.lineWidth = 3;
         ctx.stroke();
-
         this.invincibleEffects.sparkleTimer += this.game.clockTick;
         if (this.invincibleEffects.sparkleTimer > 0.1) {
             this.invincibleEffects.sparkleTimer = 0;
@@ -315,11 +329,9 @@ class Bird {
                 life: 1
             });
         }
-
         this.invincibleEffects.sparkles = this.invincibleEffects.sparkles.filter(sparkle => {
             sparkle.life -= this.game.clockTick * 2;
             if (sparkle.life <= 0) return false;
-
             ctx.beginPath();
             ctx.arc(sparkle.x, sparkle.y, sparkle.size, 0, Math.PI * 2);
             ctx.fillStyle = `hsla(${this.invincibleEffects.rainbowHue}, 100%, 50%, ${sparkle.life})`;
