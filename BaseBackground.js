@@ -20,7 +20,11 @@ class BaseBackground {
         this.coinProgress = new CoinProgress(game, this.width, level === 1 ? 2 : 8);
         this.scoreManager = new ScoreManager(this.game);
 
-        this.health = 3; // Health system: start with 3 hearts
+        this.health = 3; 
+
+        this.chanceMessage = "";
+        this.chanceMessageTimer = 0;
+        this.CHANCE_MESSAGE_DURATION = 2.0; 
     }
 
     setupSounds() {
@@ -421,6 +425,14 @@ class BaseBackground {
         if (this.dangerDisplayTime > 0) {
             this.dangerDisplayTime -= this.game.clockTick;
         }
+        
+        // --- Update chance message timer ---
+        if (this.chanceMessageTimer > 0) {
+            this.chanceMessageTimer -= this.game.clockTick;
+            if (this.chanceMessageTimer <= 0) {
+                this.chanceMessage = "";
+            }
+        }
     
         this.updateEnemyBirds();
     
@@ -624,10 +636,13 @@ class BaseBackground {
             this.swooshSound.currentTime = 0;
             this.swooshSound.play();
         }
-        // Lose one heart and grant temporary invincibility before game over.
+        // Lose one heart and grant temporary invincibility.
         if (!bird.invincible) {
             if (this.health > 0) {
                 this.health--;
+                // Set the chance message based on remaining hearts
+                this.chanceMessage = `${this.health} more ${this.health === 1 ? "chance" : "chances"}!`;
+                this.chanceMessageTimer = this.CHANCE_MESSAGE_DURATION;
                 bird.invincible = true;
                 bird.invincibleTimer = 2; // 2 seconds of invincibility
             }
@@ -646,20 +661,17 @@ class BaseBackground {
     }
 
     drawHearts(ctx) {
-        // Increase the font size for bigger hearts
         ctx.font = "40px Arial";
         ctx.fillStyle = "red";
-        const heartSpacing = 50; // Adjust spacing between hearts as needed
-    
-        // Draw hearts starting from the right side
+        const heartSpacing = 50; // spacing between hearts
+        const heartsY = 85;      // y-position beneath coin tracker
         for (let i = 0; i < this.health; i++) {
-            // Calculate x so that hearts are drawn from right to left
-            const x = this.width - heartSpacing * (i + 1);
-            ctx.fillText("♥", x, 50); // y-position can be adjusted to your preference
+            // Draw hearts from the left side with a small left margin (e.g., 10 pixels)
+            const x = heartSpacing * i + 45;
+            ctx.fillText("♥", x, heartsY);
         }
     }
     
-
     draw(ctx) {
         ctx.drawImage(this.image, 0, 0, this.width, this.height);
 
@@ -715,6 +727,13 @@ class BaseBackground {
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
         this.coinProgress.draw(ctx);
         this.drawHearts(ctx);
+
+        if (this.chanceMessageTimer > 0) {
+            ctx.font = "24px Arial";
+            ctx.fillStyle = "yellow";
+            ctx.textAlign = "center";
+            ctx.fillText(this.chanceMessage, this.width / 2, 120);
+        }
 
         if (this.levelPassedMessageTime > 0 && !this.game.gameOver && this.gameStarted) {
             const alpha = Math.min(1, this.levelPassedMessageTime * 2);
