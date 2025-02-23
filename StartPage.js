@@ -66,10 +66,12 @@ class StartPage {
                     "",
                     "• Press SPACE to make the bird flap",
                     "• Navigate through pipes to score points",
-                    "• Avoid hitting the pipes and plants",
-                    "• Collect coins for extra rewards",
-                    "• Try to beat your high score!",
-                    "• Watch out for snapping plants",
+                    "• You have 3 hearts - don't lose them all!",
+                    "• Collect coins for power-up invincibility",
+                    "• In Level 2: Click to shoot at obstacles",
+                    "• Watch out for snapping plants & evil birds",
+                    "• Temporary invincibility after getting hit",
+                    "• Collect all coins to progress levels",
                     "",
                     "Press ENTER to return to menu"
                 ];
