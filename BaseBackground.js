@@ -37,7 +37,9 @@ class BaseBackground {
         this.swooshSound = ASSET_MANAGER.getAsset("./audio/sfx_swooshing.wav");
         this.lastSoundTime = 0;
         this.MIN_SOUND_INTERVAL = 150;
-    }
+        this.dieSound = ASSET_MANAGER.getAsset("./audio/sfx_die.wav");
+        this.dieSound.volume = 0.6;
+    } 
 
     initializeProperties() {
         this.width = 800;
@@ -432,6 +434,7 @@ class BaseBackground {
             const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
             const birdBottom = birdTop + this.BIRD_HEIGHT;
             if (birdBottom >= this.baseY) {
+                this.playSound(this.dieSound); // Play sfx_die sound when the bird hits the ground
                 this.health = 0;
                 this.game.gameOver = true;
                 this.game.hasCollided = true;
@@ -444,7 +447,7 @@ class BaseBackground {
                 return;
             }
         }
-    
+        
         if (this.dangerDisplayTime > 0) {
             this.dangerDisplayTime -= this.game.clockTick;
         }
@@ -494,7 +497,7 @@ class BaseBackground {
     
         this.updateGameObjects();
         this.handleCollisions();
-    }
+    }    
 
     updateGameObjects() {
         if (!this.evilWaveActive) {
