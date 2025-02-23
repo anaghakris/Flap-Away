@@ -125,6 +125,10 @@ class BaseBackground {
     }
 
     reset() {
+        // Clear chance message to avoid glitch on restart
+        this.chanceMessage = "";
+        this.chanceMessageTimer = 0;
+
         // Clear any pending evil wave timeouts
         if (this.evilWaveTimeouts) {
             this.evilWaveTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
@@ -421,6 +425,25 @@ class BaseBackground {
 
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
+    
+        // Ground collision check: if the bird's collision box touches the base, lose all lives immediately
+        const bird = this.getBird();
+        if (bird) {
+            const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+            const birdBottom = birdTop + this.BIRD_HEIGHT;
+            if (birdBottom >= this.baseY) {
+                this.health = 0;
+                this.game.gameOver = true;
+                this.game.hasCollided = true;
+                bird.velocity = 0;
+                bird.rotation = bird.maxRotationDown;
+                this.scoreManager.updateBestScore(bird.score);
+                // Immediately clear the chance message upon ground collision
+                this.chanceMessage = "";
+                this.chanceMessageTimer = 0;
+                return;
+            }
+        }
     
         if (this.dangerDisplayTime > 0) {
             this.dangerDisplayTime -= this.game.clockTick;
@@ -730,7 +753,7 @@ class BaseBackground {
 
         if (this.chanceMessageTimer > 0) {
             ctx.font = "24px Arial";
-            ctx.fillStyle = "yellow";
+            ctx.fillStyle = "red";  // Changed to red as requested
             ctx.textAlign = "center";
             ctx.fillText(this.chanceMessage, this.width / 2, 120);
         }
