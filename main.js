@@ -43,7 +43,7 @@ ASSET_MANAGER.downloadAll(() => {
     gameEngine.currentState = 'menu'; 
     
     window.gameEngine = gameEngine; 
-    const debugButtons = new DebugButtons(gameEngine);
+    const coinButtons = new CoinSelectionButtons(gameEngine);
 
     canvas.tabIndex = 1;
     canvas.focus();
