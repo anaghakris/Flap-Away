@@ -23,6 +23,7 @@ class BaseBackground {
         this.scoreManager = new ScoreManager(this.game);
 
         this.health = 3; 
+        this.coinsForHeart = 0;
 
         this.chanceMessage = "";
         this.chanceMessageTimer = 0;
@@ -94,6 +95,7 @@ class BaseBackground {
         this.snappingPlants = [];
         this.coins = [];
         this.enemyBigBirds = [];
+        this.coinsForHeart = 0;
 
         this.gameStarted = false;
         this.hasCollided = false;
@@ -130,6 +132,7 @@ class BaseBackground {
 
     reset() {
         this.health = 3;
+        this.coinsForHeart = 0;
 
         // Clear chance message to avoid glitch on restart
         this.chanceMessage = "";
@@ -573,6 +576,18 @@ class BaseBackground {
             if (!coin.collected && coin.checkCollision(bird)) {
                 coin.collected = true;
                 this.coinProgress.collectCoin();
+                this.coinsForHeart++;
+
+                if (this.coinsForHeart >= 5 && this.health < 3) {
+                    this.heartDisplay.collectCoin();
+                    this.health++;
+                    this.coinsForHeart = 0; 
+                    if (this.heartSound) {
+                        this.heartSound.currentTime = 0;
+                        this.heartSound.play();
+                    }
+                }
+
                 if (this.coinProgress.coinsCollected >= this.coinProgress.maxCoins) {
                     bird.invincible = true;
                     bird.invincibleTimer = 10;
@@ -581,6 +596,7 @@ class BaseBackground {
             }
         });
     }
+
 
     checkPipeCollision(bird, pipe) {
         const birdLeft = bird.x + this.BIRD_X_OFFSET;
@@ -663,15 +679,13 @@ class BaseBackground {
             this.swooshSound.currentTime = 0;
             this.swooshSound.play();
         }
-        // Lose one heart and grant temporary invincibility.
         if (!bird.invincible) {
             if (this.health > 0) {
                 this.health--;
-                // Set the chance message based on remaining hearts
                 this.chanceMessage = `${this.health} more ${this.health === 1 ? "chance" : "chances"}!`;
                 this.chanceMessageTimer = this.CHANCE_MESSAGE_DURATION;
                 bird.invincible = true;
-                bird.invincibleTimer = 2; // 2 seconds of invincibility
+                bird.invincibleTimer = 2; 
             }
             if (this.health <= 0) {
                 this.game.gameOver = true;
@@ -679,6 +693,9 @@ class BaseBackground {
                 bird.velocity = 0;
                 bird.rotation = bird.maxRotationDown;
                 this.scoreManager.updateBestScore(bird.score);
+                this.chanceMessage = "";
+                this.chanceMessageTimer = 0;
+                this.coinsForHeart = 0;
             }
         }
     }
@@ -689,6 +706,13 @@ class BaseBackground {
 
     drawHearts(ctx) {
         this.heartDisplay.draw(ctx, this.health);
+        
+        if (this.health < 3 && this.coinsForHeart > 0) {
+            ctx.font = "16px Arial";
+            ctx.fillStyle = "gold";
+            ctx.textAlign = "left";
+            ctx.fillText(`Coins for Heart: ${this.coinsForHeart}/5`, 45, 140);
+        }
         
         if (this.chanceMessageTimer > 0) {
             ctx.font = "24px Arial";
