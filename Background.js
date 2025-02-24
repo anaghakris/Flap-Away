@@ -47,8 +47,11 @@ class Background extends BaseBackground {
         
         this.pipePairCount = 0;
         this.evilWaveTriggered = false;
+
+        const coinType = this.game.selectedCoinType || 'default';
+        let coinCount = coinType === 'custom' ? 2 : 15;
         
-        this.coinProgress = new CoinProgress(this.game, 800, 15);
+        this.coinProgress = new CoinProgress(this.game, 800, coinCount);
         
         if (!this.pipeSpawnInterval) {
             this.setupPipeSpawning();
