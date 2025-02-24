@@ -57,8 +57,8 @@ class BaseBackground {
         this.pipeInterval = 2000;
 
         this.minOpeningRegular = 140;
-        this.maxOpeningRegular = 200;
-        this.minOpeningSnapping = 200;
+        this.maxOpeningRegular = 130; //200
+        this.minOpeningSnapping = 140; //140
         this.maxOpeningSnapping = 200;
 
         this.snappingPlantFrameWidth = 158;
@@ -213,7 +213,7 @@ class BaseBackground {
         let minOpening, maxOpening;
 
         if (this.level === 2) {
-            const extraSpacing = 15;
+            const extraSpacing = 5;
             minOpening = this.minOpeningSnapping + extraSpacing;
             maxOpening = this.maxOpeningSnapping + extraSpacing;
         } else {
