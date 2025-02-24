@@ -711,11 +711,11 @@ class BaseBackground {
     drawHearts(ctx) {
         this.heartDisplay.draw(ctx, this.health);
         
-        if (this.health < 3 && this.coinsForHeart > 0) {
+        if (this.health < 3 && !this.game.gameOver) {
             ctx.font = "16px Arial";
-            ctx.fillStyle = "gold";
+            ctx.fillStyle = "#32CD32"; 
             ctx.textAlign = "left";
-            ctx.fillText(`Coins for Heart: ${this.coinsForHeart}/5`, 45, 140);
+            ctx.fillText("Collect 5 coins to get a heart!", 45, 140);
         }
         
         if (this.chanceMessageTimer > 0) {
