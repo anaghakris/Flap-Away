@@ -582,6 +582,10 @@ class BaseBackground {
                     this.heartDisplay.collectCoin();
                     this.health++;
                     this.coinsForHeart = 0; 
+
+                    this.chanceMessage = "Heart Restored!";
+                    this.chanceMessageTimer = this.CHANCE_MESSAGE_DURATION;
+
                     if (this.heartSound) {
                         this.heartSound.currentTime = 0;
                         this.heartSound.play();
