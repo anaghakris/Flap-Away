@@ -23,6 +23,7 @@ ASSET_MANAGER.queueDownload("./audio/powerup.wav");
 ASSET_MANAGER.queueDownload("./Sprites/Background/NightCity.png");
 ASSET_MANAGER.queueDownload("./Sprites/Background/base_night.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/night_pipe.png");
+ASSET_MANAGER.queueDownload("./Sprites/mushrooms/mushroom.png");
 
 
 

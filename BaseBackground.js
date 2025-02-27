@@ -3,6 +3,7 @@ class BaseBackground {
         this.game = game;
         this.level = level;
         
+        // Load background assets
         this.image = ASSET_MANAGER.getAsset(assets.background);
         this.base = ASSET_MANAGER.getAsset(assets.base);
         this.pipeSprite = ASSET_MANAGER.getAsset(assets.pipe);
@@ -10,10 +11,14 @@ class BaseBackground {
         this.coin = ASSET_MANAGER.getAsset(assets.background);
         this.heartDisplay = new HeartDisplay(game);
 
-
         this.snappingPlantSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/SnappingPlant.png");
         this.snappingPlantTop = ASSET_MANAGER.getAsset("./Sprites/Pipes/snapping plants top.png");
         this.enemyBigBirdSprite = ASSET_MANAGER.getAsset("./Sprites/Bird/evil_bird.png");
+        
+        // *** Mushroom integration ***
+        this.mushroomSprite = ASSET_MANAGER.getAsset("./Sprites/mushrooms/mushroom.png");
+        this.initializeMushroomProperties();
+        // *** End Mushroom integration ***
 
         this.setupSounds();
         this.initializeProperties();
@@ -30,6 +35,15 @@ class BaseBackground {
         this.CHANCE_MESSAGE_DURATION = 2.0; 
     }
 
+    // Method to play a sound
+    playSound(sound) {
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play();
+        }
+    }
+
+    // Initialize all sound assets
     setupSounds() {
         this.hitSound = ASSET_MANAGER.getAsset("./audio/sfx_hit.wav");
         this.hitSound.volume = 0.6;
@@ -44,6 +58,7 @@ class BaseBackground {
         this.dieSound.volume = 0.6;
     } 
 
+    // Initialize game-level properties
     initializeProperties() {
         this.width = 800;
         this.height = 600;
@@ -56,10 +71,10 @@ class BaseBackground {
         this.pipeSpacing = 200;
         this.pipeInterval = 2000;
 
-        this.minOpeningRegular = 140; //140
-        this.maxOpeningRegular = 140; //200
-        this.minOpeningSnapping = 170; //200
-        this.maxOpeningSnapping = 200; //200
+        this.minOpeningRegular = 140;
+        this.maxOpeningRegular = 140;
+        this.minOpeningSnapping = 170;
+        this.maxOpeningSnapping = 200;
 
         this.snappingPlantFrameWidth = 158;
         this.snappingPlantFrameHeight = 250;
@@ -90,12 +105,17 @@ class BaseBackground {
         };
     }
 
+    // Initialize game state arrays and timers
     setupGameState() {
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
         this.enemyBigBirds = [];
         this.coinsForHeart = 0;
+        
+        // *** Initialize mushrooms for level 2 ***
+        this.mushrooms = [];
+        // *** End mushrooms initialization ***
 
         this.gameStarted = false;
         this.hasCollided = false;
@@ -121,24 +141,24 @@ class BaseBackground {
         this.setupPipeSpawning();
     }
 
-    playSound(sound) {
-        const currentTime = Date.now();
-        if (currentTime - this.lastSoundTime >= this.MIN_SOUND_INTERVAL) {
-            sound.currentTime = 0;
-            sound.play();
-            this.lastSoundTime = currentTime;
-        }
+    // Set up mushroom animation properties
+    initializeMushroomProperties() {
+        this.MUSHROOM_FRAME_WIDTH = 400;
+        this.MUSHROOM_FRAME_HEIGHT = 335;
+        this.MUSHROOM_ANIMATION_FRAMES = 2;
+        this.MUSHROOM_ANIMATION_DURATION = 0.3;
+        this.MUSHROOM_SCALE = 0.25;
+        this.MUSHROOM_WIDTH = this.MUSHROOM_FRAME_WIDTH * this.MUSHROOM_SCALE;
+        this.MUSHROOM_HEIGHT = this.MUSHROOM_FRAME_HEIGHT * this.MUSHROOM_SCALE;
     }
 
     reset() {
         this.health = 3;
         this.coinsForHeart = 0;
 
-        // Clear chance message to avoid glitch on restart
         this.chanceMessage = "";
         this.chanceMessageTimer = 0;
 
-        // Clear any pending evil wave timeouts
         if (this.evilWaveTimeouts) {
             this.evilWaveTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
             this.evilWaveTimeouts = [];
@@ -187,6 +207,9 @@ class BaseBackground {
         this.evilWaveTriggered = false;
         this.evilWaveBirdsSpawned = 0;
 
+        // Debug log: starting game
+        console.log("Game started; setting gameStarted to true.");
+
         this.game.entities.forEach(entity => {
             if (entity instanceof Bird) {
                 entity.startGame();
@@ -208,10 +231,10 @@ class BaseBackground {
     spawnPipePair() {
         if (!this.gameStarted || this.game.gameOver || this.evilWaveActive || this.postEvilWaveDelayTimer > 0)
             return;
-
+    
         const hasSnappingPlant = this.pipePairCount % 2 === 0;
         let minOpening, maxOpening;
-
+    
         if (this.level === 2) {
             const extraSpacing = 5;
             minOpening = this.minOpeningSnapping + extraSpacing;
@@ -220,12 +243,12 @@ class BaseBackground {
             minOpening = hasSnappingPlant ? this.minOpeningSnapping : this.minOpeningRegular;
             maxOpening = hasSnappingPlant ? this.maxOpeningSnapping : this.maxOpeningRegular;
         }
-
+    
         const opening = minOpening + Math.random() * (maxOpening - minOpening);
         const minTopPipeHeight = 50;
         const maxTopPipeHeight = this.baseY - opening - 100;
         const topPipeHeight = minTopPipeHeight + Math.random() * (maxTopPipeHeight - minTopPipeHeight);
-
+    
         const topPipe = {
             x: this.width,
             y: 0,
@@ -238,7 +261,7 @@ class BaseBackground {
             originalTopHeight: topPipeHeight,
             originalOpening: opening
         };
-
+    
         const bottomPipe = {
             x: this.width,
             y: topPipeHeight + opening,
@@ -250,16 +273,44 @@ class BaseBackground {
             movingTime: 0,
             originalY: topPipeHeight + opening
         };
-
+    
         this.pipeArray.push(topPipe, bottomPipe);
-
+    
+        // Spawn a coin as before
         const minDistanceFromPipe = 100;
         const coinX = topPipe.x + this.pipeWidth + minDistanceFromPipe + Math.random() * this.pipeWidth;
         const maxY = this.baseY - 50;
         const minY = 50;
         const coinY = minY + Math.random() * (maxY - minY);
         this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed, this.coinSound));
-
+    
+        // *** Modified Mushroom spawn on the ground in a gap between pipes ***
+        // For level 2 every 3 pipe pairs, choose an x-position along the ground that does not overlap
+        // any bottom pipe (i.e. where pipes aren’t covering the ground).
+        if (this.level === 2 && (this.pipePairCount + 1) % 3 === 0) {
+            let mushroomX;
+            let attempts = 0;
+            do {
+                mushroomX = Math.random() * (this.width - this.MUSHROOM_WIDTH);
+                attempts++;
+                // Try a few times; if we can’t find a gap, break out.
+                if (attempts > 10) break;
+            } while (
+                this.pipeArray.some(pipe => 
+                    pipe.type === 'bottom' &&
+                    mushroomX < pipe.x + pipe.width &&
+                    mushroomX + this.MUSHROOM_WIDTH > pipe.x
+                )
+            );
+            this.mushrooms.push({
+                x: mushroomX,
+                y: this.baseY - this.MUSHROOM_HEIGHT,  // align with the ground
+                elapsedTime: 0,
+                frame: 0
+            });
+        }
+        // *** End Mushroom spawn ***
+    
         const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
         if (this.level === 2 || this.pipePairCount % 2 === 0) {
             if (Math.random() < 0.5) {
@@ -288,16 +339,15 @@ class BaseBackground {
                 bottomPipe.hasPlant = true;
             }
         }
-
+    
         this.pipePairCount++;
         if (!this.evilWaveTriggered && this.pipePairCount === this.EVIL_WAVE_PIPE_COUNT) {
             this.triggerEvilWave();
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
     }
-
+    
     triggerEvilWave() {
-        // Clear any previous evil wave timeouts
         if (this.evilWaveTimeouts) {
             this.evilWaveTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
             this.evilWaveTimeouts = [];
@@ -311,7 +361,6 @@ class BaseBackground {
         clearInterval(this.pipeSpawnInterval);
         this.pipeSpawnInterval = null;
 
-        // Only spawn birds if it's not level 2
         if (this.level !== 2) {
             this.evilWaveBirdsSpawned = 0;
             this.spawnEnemyBigBird();
@@ -330,7 +379,6 @@ class BaseBackground {
             };
             spawnNextBird();
         } else {
-            // For level 2, just show the empty phase without birds
             setTimeout(() => {
                 this.evilWaveActive = false;
                 this.levelPassedMessageTime = this.levelPassedMessageDuration;
@@ -432,20 +480,19 @@ class BaseBackground {
     update() {
         if (!this.gameStarted || this.game.gameOver) return;
     
-        // Ground collision check: if the bird's collision box touches the base, lose all lives immediately
+        // Ground collision check
         const bird = this.getBird();
         if (bird) {
             const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
             const birdBottom = birdTop + this.BIRD_HEIGHT;
             if (birdBottom >= this.baseY) {
-                this.playSound(this.dieSound); // Play sfx_die sound when the bird hits the ground
+                this.playSound(this.dieSound);
                 this.health = 0;
                 this.game.gameOver = true;
                 this.game.hasCollided = true;
                 bird.velocity = 0;
                 bird.rotation = bird.maxRotationDown;
                 this.scoreManager.updateBestScore(bird.score);
-                // Immediately clear the chance message upon ground collision
                 this.chanceMessage = "";
                 this.chanceMessageTimer = 0;
                 return;
@@ -456,7 +503,6 @@ class BaseBackground {
             this.dangerDisplayTime -= this.game.clockTick;
         }
         
-        // --- Update chance message timer ---
         if (this.chanceMessageTimer > 0) {
             this.chanceMessageTimer -= this.game.clockTick;
             if (this.chanceMessageTimer <= 0) {
@@ -485,6 +531,8 @@ class BaseBackground {
         if (this.flashTimer > 0) {
             this.flashTimer -= this.game.clockTick;
             if (this.flashTimer <= 0 && this.level === 1) {
+                // Debug log: transitioning level
+                console.log("Transitioning to Level 2");
                 this.transitionToLevel2();
                 return;
             }
@@ -500,6 +548,21 @@ class BaseBackground {
         }
     
         this.updateGameObjects();
+        
+        // *** Update mushrooms in level 2 ***
+        if (this.level === 2) {
+            this.mushrooms.forEach(mushroom => {
+                mushroom.x -= this.pipeSpeed;
+                mushroom.elapsedTime += this.game.clockTick;
+                if (mushroom.elapsedTime >= this.MUSHROOM_ANIMATION_DURATION) {
+                    mushroom.elapsedTime = 0;
+                    mushroom.frame = (mushroom.frame + 1) % this.MUSHROOM_ANIMATION_FRAMES;
+                }
+            });
+            this.mushrooms = this.mushrooms.filter(m => m.x + this.MUSHROOM_WIDTH > 0);
+        }
+        // *** End mushrooms update ***
+
         this.handleCollisions();
     }    
 
@@ -570,6 +633,16 @@ class BaseBackground {
                     this.handleCollision(bird);
                 }
             });
+            
+            // *** Check mushroom collisions in level 2 ***
+            if (this.level === 2) {
+                this.mushrooms.forEach(mushroom => {
+                    if (this.checkMushroomCollision(bird, mushroom)) {
+                        this.handleCollision(bird);
+                    }
+                });
+            }
+            // *** End mushroom collision check ***
         }
 
         this.coins.forEach(coin => {
@@ -601,7 +674,7 @@ class BaseBackground {
         });
     }
 
-
+    // Collision detection for pipes
     checkPipeCollision(bird, pipe) {
         const birdLeft = bird.x + this.BIRD_X_OFFSET;
         const birdRight = birdLeft + this.BIRD_WIDTH;
@@ -621,6 +694,7 @@ class BaseBackground {
         );
     }
 
+    // Collision detection for snapping plants
     checkPlantCollision(bird, plant) {
         if (plant.elapsedTime < 0) return false;
 
@@ -658,6 +732,7 @@ class BaseBackground {
         );
     }
 
+    // Collision detection for enemy big birds
     checkEnemyBigBirdCollision(bird, enemy) {
         const birdLeft = bird.x + this.BIRD_X_OFFSET;
         const birdRight = birdLeft + this.BIRD_WIDTH;
@@ -674,6 +749,26 @@ class BaseBackground {
             birdLeft < enemyRight &&
             birdBottom > enemyTop &&
             birdTop < enemyBottom
+        );
+    }
+
+    // Collision detection for mushrooms
+    checkMushroomCollision(bird, mushroom) {
+        const birdLeft = bird.x + this.BIRD_X_OFFSET;
+        const birdRight = birdLeft + this.BIRD_WIDTH;
+        const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        const birdBottom = birdTop + this.BIRD_HEIGHT;
+
+        const mushroomLeft = mushroom.x;
+        const mushroomRight = mushroom.x + this.MUSHROOM_WIDTH;
+        const mushroomTop = mushroom.y;
+        const mushroomBottom = mushroom.y + this.MUSHROOM_HEIGHT;
+
+        return (
+            birdRight > mushroomLeft &&
+            birdLeft < mushroomRight &&
+            birdBottom > mushroomTop &&
+            birdTop < mushroomBottom
         );
     }
 
@@ -767,9 +862,9 @@ class BaseBackground {
             );
         });
 
-        const frameWidth = 250;
-        const frameHeight = 202;
         this.enemyBigBirds.forEach(enemy => {
+            const frameWidth = 250;
+            const frameHeight = 202;
             const frameIndex = Math.floor(enemy.elapsedTime / this.enemyBigBirdFrameDuration) % this.enemyBigBirdFrameCount;
             ctx.drawImage(
                 this.enemyBigBirdSprite,
@@ -777,6 +872,24 @@ class BaseBackground {
                 enemy.x, enemy.y, enemy.width, enemy.height
             );
         });
+
+        // *** Draw mushrooms in level 2 ***
+        if (this.level === 2) {
+            this.mushrooms.forEach(mushroom => {
+                ctx.drawImage(
+                    this.mushroomSprite,
+                    mushroom.frame * this.MUSHROOM_FRAME_WIDTH,
+                    0,
+                    this.MUSHROOM_FRAME_WIDTH,
+                    this.MUSHROOM_FRAME_HEIGHT,
+                    mushroom.x,
+                    mushroom.y,
+                    this.MUSHROOM_WIDTH,
+                    this.MUSHROOM_HEIGHT
+                );
+            });
+        }
+        // *** End drawing mushrooms ***
 
         ctx.drawImage(this.base, 0, this.baseY, this.width, this.baseHeight);
         this.coinProgress.draw(ctx);
@@ -931,5 +1044,15 @@ class BaseBackground {
         ctx.font = '16px "Press Start 2P", monospace';
         ctx.fillStyle = colors.text;
         ctx.fillText('RETURN TO MENU', returnBtnX + returnBtnWidth / 2, returnBtnY + returnBtnHeight / 2 + 8);
+    }
+
+    // Stub method for transitioning to level 2
+    transitionToLevel2() {
+        // Debug log: level transition called
+        console.log("transitionToLevel2() called. Transitioning from Level 1 to Level 2.");
+        // Implement your level transition logic here. For now, we'll simply set the level to 2.
+        this.level = 2;
+        // Reset any necessary state here for level 2.
+        // For example, reset pipe pairs, enemy birds, or adjust coinProgress.maxCoins.
     }
 }
