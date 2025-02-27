@@ -35,7 +35,6 @@ class BaseBackground {
         this.CHANCE_MESSAGE_DURATION = 2.0; 
     }
 
-    
     // Method to play a sound
     playSound(sound) {
         if (sound) {
@@ -58,9 +57,6 @@ class BaseBackground {
         this.dieSound = ASSET_MANAGER.getAsset("./audio/sfx_die.wav");
         this.dieSound.volume = 0.6;
     } 
-
-}
-
 
     // Initialize game-level properties
     initializeProperties() {
@@ -785,7 +781,7 @@ class BaseBackground {
         if (!bird.invincible) {
             if (this.health > 0) {
                 this.health--;
-                this.chanceMessage = `${this.health} more ${this.health === 1 ? "chance" : "chances"}!`;
+                this.chanceMessage = ${this.health} more ${this.health === 1 ? "chance" : "chances"}!;
                 this.chanceMessageTimer = this.CHANCE_MESSAGE_DURATION;
                 bird.invincible = true;
                 bird.invincibleTimer = 2; 
@@ -912,14 +908,14 @@ class BaseBackground {
             ctx.save();
             ctx.translate(this.width / 2, this.height / 3);
             ctx.scale(pulse, pulse);
-            ctx.fillStyle = `rgba(50, 255, 50, ${alpha})`;
-            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.fillStyle = rgba(50, 255, 50, ${alpha});
+            ctx.strokeStyle = rgba(0, 0, 0, ${alpha});
             ctx.lineWidth = 4;
             ctx.font = '60px "Press Start 2P"';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.strokeText(`LEVEL ${this.level} PASSED!`, 0, 0);
-            ctx.fillText(`LEVEL ${this.level} PASSED!`, 0, 0);
+            ctx.strokeText(LEVEL ${this.level} PASSED!, 0, 0);
+            ctx.fillText(LEVEL ${this.level} PASSED!, 0, 0);
             ctx.restore();
         } else if (this.dangerDisplayTime > 0 && !this.game.gameOver && this.gameStarted) {
             const alpha = Math.min(1, this.dangerDisplayTime * 2);
@@ -927,8 +923,8 @@ class BaseBackground {
             ctx.save();
             ctx.translate(this.width / 2, this.height / 3);
             ctx.scale(pulse, pulse);
-            ctx.fillStyle = `rgba(255, 50, 50, ${alpha})`;
-            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.fillStyle = rgba(255, 50, 50, ${alpha});
+            ctx.strokeStyle = rgba(0, 0, 0, ${alpha});
             ctx.lineWidth = 4;
             ctx.font = '60px "Press Start 2P"';
             ctx.textAlign = 'center';
