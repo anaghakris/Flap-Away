@@ -35,13 +35,12 @@ class BaseBackground {
         this.CHANCE_MESSAGE_DURATION = 2.0; 
     }
 
-    // Updated playSound method with rate limiting
+    
+    // Method to play a sound
     playSound(sound) {
-        const currentTime = Date.now();
-        if (currentTime - this.lastSoundTime >= this.MIN_SOUND_INTERVAL) {
+        if (sound) {
             sound.currentTime = 0;
             sound.play();
-            this.lastSoundTime = currentTime;
         }
     }
 
