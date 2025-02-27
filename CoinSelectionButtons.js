@@ -41,15 +41,28 @@ class CoinSelectionButtons {
         button.style.fontFamily = '"Press Start 2P", monospace';
         button.style.fontSize = '14px';
         button.style.transition = 'background-color 0.2s';
+    
         button.addEventListener('mouseover', () => {
             button.style.backgroundColor = this.adjustColor(backgroundColor, -20);
         });
         button.addEventListener('mouseout', () => {
             button.style.backgroundColor = backgroundColor;
         });
-        button.addEventListener('click', onClick);
+        
+        // Prevent the button from stealing focus on mousedown.
+        button.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+        });
+    
+        button.addEventListener('click', (e) => {
+            onClick();
+            // Optionally, remove focus from the button after click.
+            button.blur();
+        });
+    
         return button;
     }
+    
 
     switchCoinType(type) {
         this.gameEngine.selectedCoinType = type;
