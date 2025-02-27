@@ -293,7 +293,8 @@ class BaseBackground {
                 x: mushroomX,
                 y: this.baseY - this.MUSHROOM_HEIGHT,
                 elapsedTime: 0,
-                frame: 0
+                frame: 0,
+                velocityY: 0 // Added property for vertical movement
             });
         }
     
@@ -534,8 +535,35 @@ class BaseBackground {
         this.updateGameObjects();
         
         if (this.level === 2) {
+            // Update mushrooms with jump behavior
             this.mushrooms.forEach(mushroom => {
+                // Move mushroom left along with the pipe speed
                 mushroom.x -= this.pipeSpeed;
+                
+                // Check if the bird is near horizontally and the mushroom is on the ground
+                const bird = this.getBird();
+                if (bird) {
+                    const mushroomCenterX = mushroom.x + this.MUSHROOM_WIDTH / 2;
+                    const birdCenterX = bird.x + this.BIRD_WIDTH / 2;
+                    const dx = Math.abs(mushroomCenterX - birdCenterX);
+                    // If the horizontal distance is less than 150 and the mushroom is on the ground, jump
+                    if (dx < 150 && mushroom.y >= this.baseY - this.MUSHROOM_HEIGHT - 1) {
+                        mushroom.velocityY = -10;  // adjust jump speed as needed
+                    }
+                }
+                
+                // Apply gravity to the mushroom
+                const gravity = 20; // adjust gravity as needed
+                mushroom.velocityY += gravity * this.game.clockTick;
+                mushroom.y += mushroom.velocityY;
+                
+                // Prevent mushroom from falling below the base
+                if (mushroom.y > this.baseY - this.MUSHROOM_HEIGHT) {
+                    mushroom.y = this.baseY - this.MUSHROOM_HEIGHT;
+                    mushroom.velocityY = 0;
+                }
+                
+                // Update mushroom animation frames as before
                 mushroom.elapsedTime += this.game.clockTick;
                 if (mushroom.elapsedTime >= this.MUSHROOM_ANIMATION_DURATION) {
                     mushroom.elapsedTime = 0;
