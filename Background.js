@@ -18,6 +18,7 @@ class Background extends BaseBackground {
         };
         this.powerUpNotification = null;
         this.weaponUpgradeAnimation = null;
+        this.levelTransitionCooldown = 0;
     }
 
     transitionToLevel2() {
@@ -215,10 +216,90 @@ class Background extends BaseBackground {
             duration: 2
         };
     }
+    transitionToLevel3() {
+        if (this.score > this.bestScore) {
+            this.bestScore = this.score;
+            localStorage.setItem('flappyBestScore', this.bestScore);
+        }
+        
+        this.level = 3;
+    
+        this.levelTitleAnimation = {
+            active: true,
+            timer: 0,
+            duration: 2,
+            scale: 0,
+            opacity: 0,
+            y: this.game.ctx.canvas.height / 2
+        };
+    
+        this.pipeArray = [];
+        this.snappingPlants = [];
+        this.coins = [];
+        this.enemyBigBirds = [];
+        
+        this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Retro.png");
+        this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base_night.png");
+        this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/level3pipe.png");
+        this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/level3pipe.png");
+    
+        this.pipePairCount = 0;
+        this.evilWaveTriggered = false;
+    
+        const coinType = this.game.selectedCoinType || 'default';
+        let coinCount = coinType === 'custom' ? 2 : 20;
+        
+        this.coinProgress = new CoinProgress(this.game, 800, coinCount);
+        
+        if (!this.pipeSpawnInterval) {
+            this.setupPipeSpawning();
+        }
+        
+        let bird = this.getBird();
+        if (bird) {
+            bird.changeSpriteSheet(ASSET_MANAGER.getAsset("./Sprites/Bird/redbird_sprite_sheet.png"));
 
+            console.log("Level 3: Auto-shooting is disabled.");
+
+            if (bird.autoShooting) {
+                bird.autoShooting = false;
+                bird.shootCooldown = 0;
+                bird.shootInterval = 1;
+                bird.findTargetPlant = function() {
+                    return null; 
+                };
+                bird.shoot = function() {
+
+                };
+            }
+    
+            if (bird.startGame) {
+                bird.startGame();
+            }
+        }
+        
+        if (!this.plantExplosions) {
+            this.plantExplosions = [];
+        }
+        
+        // this.weaponUpgradeAnimation = {
+        //     active: true,
+        //     timer: 0,
+        //     duration: 2
+        // };
+    }
+    
     checkLevelProgression() {
+        if (this.levelTransitionCooldown > 0) {
+            this.levelTransitionCooldown -= this.game.clockTick;
+            return;
+        }
+        
         if (this.level === 1 && this.coinProgress.coinsCollected >= this.coinProgress.maxCoins) {
             this.transitionToLevel2();
+            this.levelTransitionCooldown = 3; 
+        } else if (this.level === 2 && this.coinProgress.coinsCollected >= this.coinProgress.maxCoins) {
+            this.transitionToLevel3();
         }
     }
 
@@ -256,14 +337,15 @@ class Background extends BaseBackground {
             
             ctx.strokeStyle = "black";
             ctx.lineWidth = 8;
-            ctx.strokeText("LEVEL 2", centerX, centerY);
+            const levelText = this.level === 3 ? "LEVEL 3" : "LEVEL 2"; 
+            ctx.strokeText(levelText, centerX, centerY);
             
             ctx.fillStyle = "#FFD700";
-            ctx.fillText("LEVEL 2", centerX, centerY);
+            ctx.fillText(levelText, centerX, centerY);
             
             ctx.shadowColor = "#FFD700";
             ctx.shadowBlur = 20;
-            ctx.fillText("LEVEL 2", centerX, centerY);
+            ctx.fillText(levelText, centerX, centerY);
             
             ctx.restore();
         }

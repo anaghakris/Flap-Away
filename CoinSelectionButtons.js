@@ -71,13 +71,32 @@ class CoinSelectionButtons {
             console.error('Background entity not found');
             return;
         }
-
-        let coinCount = type === 'custom' ? 2 : (background.level === 2 ? 15 : 8);
+        let coinCount;
+        if (type === 'custom') {
+            coinCount = 2; 
+        } else {
+            switch (background.level) {
+                case 1:
+                    coinCount = 8; 
+                    break;
+                case 2:
+                    coinCount = 15; 
+                    break;
+                case 3:
+                    coinCount = 20; 
+                    break;
+                default:
+                    coinCount = 8; 
+                    break;
+            }
+        }
+    
         background.coinProgress = new CoinProgress(this.gameEngine, 800, coinCount);
         background.coins = [];
         background.coinProgress.reset();
         console.log(`Switched to ${type} coin type with ${coinCount} coins.`);
     }
+    
     
 
     adjustColor(color, amount) {

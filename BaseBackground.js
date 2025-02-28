@@ -196,6 +196,11 @@ class BaseBackground {
             if (bird) {
                 bird.score = 15;
             }
+        } else if (this.level === 3) {
+            let bird = this.getBird();
+            if (bird) {
+                bird.score = 30;
+            }
         }
         this.game.gameOver = false;
     }
@@ -373,7 +378,7 @@ class BaseBackground {
         clearInterval(this.pipeSpawnInterval);
         this.pipeSpawnInterval = null;
 
-        if (this.level !== 2) {
+        if (this.level === 1) {
             this.evilWaveBirdsSpawned = 0;
             this.spawnEnemyBigBird();
             this.evilWaveBirdsSpawned++;
@@ -534,19 +539,30 @@ class BaseBackground {
     
         if (this.levelPassedMessageTime > 0) {
             this.levelPassedMessageTime -= this.game.clockTick;
-            if (this.levelPassedMessageTime <= 0 && this.level === 1) {
-                this.flashTimer = this.FLASH_DURATION;
+            if (this.levelPassedMessageTime <= 0) {
+                if (this.level === 1 || this.level === 2) { 
+                    this.flashTimer = this.FLASH_DURATION;
+                }
             }
         }
+        
     
         if (this.flashTimer > 0) {
             this.flashTimer -= this.game.clockTick;
-            if (this.flashTimer <= 0 && this.level === 1) {
-                console.log("Transitioning to Level 2");
-                this.transitionToLevel2();
-                return;
+            
+            if (this.flashTimer <= 0) {
+                if (this.level === 1) {
+                    console.log("Transitioning to Level 2...");
+                    this.transitionToLevel2();
+                    return;
+                } else if (this.level === 2) {
+                    console.log("Transitioning to Level 3...");
+                    this.transitionToLevel3();
+                    return;
+                }
             }
         }
+        
     
         if (this.postEvilWaveDelayTimer > 0) {
             this.postEvilWaveDelayTimer -= this.game.clockTick;
@@ -1250,6 +1266,10 @@ class BaseBackground {
     transitionToLevel2() {
         console.log("transitionToLevel2() called. Transitioning from Level 1 to Level 2.");
         this.level = 2;
+    }
+    transitionToLevel3() {
+        console.log("transitionToLevel3() called. Transitioning from Level 2 to Level 3.");
+        this.level = 3;
     }
 
     handleKeyDown(e) {

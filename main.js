@@ -8,6 +8,7 @@ ASSET_MANAGER.queueDownload("./Sprites/Pipes/bottom pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/top pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Bird/yellowbird-sprite-sheet.png")
 ASSET_MANAGER.queueDownload("./Sprites/Bird/bluebird_sprite_sheet.png")
+ASSET_MANAGER.queueDownload("./Sprites/Bird/redbird_sprite_sheet.png")
 ASSET_MANAGER.queueDownload("./Sprites/Bird/evil_bird.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/SnappingPlant.png"); 
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/snapping plants top.png");
@@ -24,6 +25,9 @@ ASSET_MANAGER.queueDownload("./Sprites/Background/NightCity.png");
 ASSET_MANAGER.queueDownload("./Sprites/Background/base_night.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/night_pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/mushrooms/mushroom.png");
+ASSET_MANAGER.queueDownload("./Sprites/Background/Retro.png");
+ASSET_MANAGER.queueDownload("./Sprites/Pipes/level3pipe.png");
+ASSET_MANAGER.queueDownload("./Sprites/Pipes/level3pipe.png");
 
 
 
