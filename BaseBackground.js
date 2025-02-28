@@ -584,7 +584,6 @@ class BaseBackground {
                     const mushroomCenterX = mushroom.x + this.MUSHROOM_WIDTH / 2;
                     const birdCenterX = bird.x + this.BIRD_WIDTH / 2;
                     const dx = Math.abs(mushroomCenterX - birdCenterX);
-                    // If the horizontal distance is less than 150 and the mushroom is on the ground, trigger a jump with variable speed.
                     if (dx < 150 && mushroom.y >= this.baseY - this.MUSHROOM_HEIGHT - 1) {
                         const minJumpSpeed = 8;   // minimum jump speed
                         const maxJumpSpeed = 15;  // maximum jump speed
@@ -832,22 +831,25 @@ class BaseBackground {
             if (!coin.collected && coin.checkCollision(bird)) {
                 coin.collected = true;
                 this.coinProgress.collectCoin();
-                this.coinsForHeart++;
-
+                
+                if (this.health < 3) {
+                    this.coinsForHeart++;
+                }
+        
                 if (this.coinsForHeart >= 5 && this.health < 3) {
                     this.heartDisplay.collectCoin();
                     this.health++;
                     this.coinsForHeart = 0; 
-
+        
                     this.chanceMessage = "Heart Restored!";
                     this.chanceMessageTimer = this.CHANCE_MESSAGE_DURATION;
-
+        
                     if (this.heartSound) {
                         this.heartSound.currentTime = 0;
                         this.heartSound.play();
                     }
                 }
-
+        
                 if (this.coinProgress.coinsCollected >= this.coinProgress.maxCoins) {
                     bird.invincible = true;
                     bird.invincibleTimer = 10;
@@ -964,6 +966,8 @@ class BaseBackground {
                 this.chanceMessageTimer = this.CHANCE_MESSAGE_DURATION;
                 bird.invincible = true;
                 bird.invincibleTimer = 2; 
+                
+                this.coinsForHeart = 0;
             }
             if (this.health <= 0) {
                 this.game.gameOver = true;
@@ -1041,9 +1045,7 @@ class BaseBackground {
             );
         });
 
-        // Draw plant explosions
         this.plantExplosions.forEach(explosion => {
-            // Draw light effect
             if (explosion.light) {
                 const gradient = ctx.createRadialGradient(
                     explosion.x, explosion.y, 0,
@@ -1060,7 +1062,6 @@ class BaseBackground {
                 ctx.fill();
             }
             
-            // Draw shockwave
             if (explosion.shockwave) {
                 ctx.strokeStyle = `rgba(255, 255, 255, ${explosion.shockwave.life / explosion.shockwave.maxLife * 0.5})`;
                 ctx.lineWidth = 2;
@@ -1069,7 +1070,6 @@ class BaseBackground {
                 ctx.stroke();
             }
             
-            // Draw particles
             explosion.particles.forEach(particle => {
                 ctx.fillStyle = particle.color;
                 ctx.globalAlpha = particle.life / particle.maxLife;
