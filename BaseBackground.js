@@ -38,7 +38,6 @@ class BaseBackground {
             this.plantDeathSound.volume = 0.4;
         }
 
-        document.addEventListener('keydown', this.handleKeyDown.bind(this));
     }
 
     playSound(sound) {
