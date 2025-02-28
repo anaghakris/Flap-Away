@@ -3,21 +3,23 @@ class CoinSelectionButtons {
         this.gameEngine = gameEngine;
         this.setupButtons();
     }
-
+    
     setupButtons() {
         const buttonsContainer = document.getElementById('coin-selection-buttons');
         if (!buttonsContainer) {
             console.error('Coin selection buttons container not found');
             return;
         }
+
         buttonsContainer.style.position = 'fixed';
-        buttonsContainer.style.top = '20px';
+        buttonsContainer.style.bottom = '20px';
         buttonsContainer.style.left = '50%';
         buttonsContainer.style.transform = 'translateX(-50%)';
         buttonsContainer.style.display = 'flex';
+        buttonsContainer.style.justifyContent = 'center';
         buttonsContainer.style.gap = '16px';
         buttonsContainer.style.zIndex = '1000';
-
+        
         const defaultCoinsButton = this.createButton('Default Coins', '#4CAF50', () => {
             this.switchCoinType('default');
         });
@@ -28,7 +30,7 @@ class CoinSelectionButtons {
         buttonsContainer.appendChild(defaultCoinsButton);
         buttonsContainer.appendChild(customCoinsButton);
     }
-
+    
     createButton(text, backgroundColor, onClick) {
         const button = document.createElement('button');
         button.textContent = text;
@@ -41,29 +43,26 @@ class CoinSelectionButtons {
         button.style.fontFamily = '"Press Start 2P", monospace';
         button.style.fontSize = '14px';
         button.style.transition = 'background-color 0.2s';
-    
+        
         button.addEventListener('mouseover', () => {
             button.style.backgroundColor = this.adjustColor(backgroundColor, -20);
         });
         button.addEventListener('mouseout', () => {
             button.style.backgroundColor = backgroundColor;
         });
-        
-        // Prevent the button from stealing focus on mousedown.
+
         button.addEventListener('mousedown', (e) => {
             e.preventDefault();
         });
-    
+        
         button.addEventListener('click', (e) => {
             onClick();
-            // Optionally, remove focus from the button after click.
             button.blur();
         });
-    
+        
         return button;
     }
     
-
     switchCoinType(type) {
         this.gameEngine.selectedCoinType = type;
         const background = this.gameEngine.entities.find(entity => entity.level !== undefined);
@@ -73,32 +72,30 @@ class CoinSelectionButtons {
         }
         let coinCount;
         if (type === 'custom') {
-            coinCount = 2; 
+            coinCount = 2;
         } else {
             switch (background.level) {
                 case 1:
-                    coinCount = 8; 
+                    coinCount = 8;
                     break;
                 case 2:
-                    coinCount = 15; 
+                    coinCount = 15;
                     break;
                 case 3:
-                    coinCount = 20; 
+                    coinCount = 20;
                     break;
                 default:
-                    coinCount = 8; 
+                    coinCount = 8;
                     break;
             }
         }
-    
+        
         background.coinProgress = new CoinProgress(this.gameEngine, 800, coinCount);
         background.coins = [];
         background.coinProgress.reset();
         console.log(`Switched to ${type} coin type with ${coinCount} coins.`);
     }
     
-    
-
     adjustColor(color, amount) {
         const hex = color.replace('#', '');
         const num = parseInt(hex, 16);
