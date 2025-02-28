@@ -51,6 +51,17 @@ class Bird {
             textY: -50
         };
         this.projectiles = [];
+        
+        this.autoShooting = false;
+        this.shootCooldown = 0;
+        this.shootInterval = 1; 
+        this.shootSound = ASSET_MANAGER.getAsset("./audio/sfx_swooshing.wav");
+        this.muzzleFlashes = [];
+    }
+
+    enableAutoShooting() {
+        this.autoShooting = true;
+        console.log("Auto-shooting enabled for bird");
     }
 
     shoot(targetX, targetY) {
@@ -59,16 +70,88 @@ class Bird {
         const dx = targetX - centerX;
         const dy = targetY - centerY;
         const angle = Math.atan2(dy, dx);
-        const speed = 10;
+        const speed = 12; 
+        
+        if (this.shootSound) {
+            const shootSoundClone = this.shootSound.cloneNode();
+            shootSoundClone.volume = 0.3;
+            shootSoundClone.play().catch(e => console.log("Audio play failed:", e));
+        }
+        
         const projectile = {
             x: centerX,
             y: centerY,
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed,
-            radius: 5,
-            life: 2
+            radius: 6,
+            life: 2,
+            targetId: null, 
+            color: 'yellow',
+            trail: [], 
+            angle: angle 
         };
+        
         this.projectiles.push(projectile);
+        
+        this.createMuzzleFlash(centerX, centerY, angle);
+        
+        return projectile;
+    }
+
+    createMuzzleFlash(x, y, angle) {
+        const flash = {
+            x: x + Math.cos(angle) * 20,
+            y: y + Math.sin(angle) * 20,
+            radius: 15,
+            life: 0.15,
+            angle: angle
+        };
+        
+        if (!this.muzzleFlashes) {
+            this.muzzleFlashes = [];
+        }
+        
+        this.muzzleFlashes.push(flash);
+    }
+
+    findTargetPlant() {
+        const background = this.game.entities.find(e => e instanceof BaseBackground);
+        if (!background || !background.snappingPlants || background.snappingPlants.length === 0) {
+            return null;
+        }
+        
+        const centerX = this.x + 34 * 0.6;
+        const centerY = this.y + 70 * 0.6;
+        
+        const plantsAhead = background.snappingPlants.filter(plant => 
+            plant.x > centerX && 
+            !plant.isDead && 
+            plant.x < centerX + 500 
+        );
+        
+        if (plantsAhead.length === 0) return null;
+        
+        let closestPlant = plantsAhead[0];
+        let closestDist = Number.MAX_VALUE;
+        
+        plantsAhead.forEach(plant => {
+            const plantCenterX = plant.x + (background.snappingPlantFrameWidth * background.snappingPlantScale) / 2;
+            const plantCenterY = plant.type === "top" 
+                ? plant.y + background.snappingPlantTopFrameHeight * background.snappingPlantScale / 2
+                : plant.y + background.snappingPlantFrameHeight * background.snappingPlantScale / 2;
+                
+            const dist = Math.sqrt(
+                Math.pow(plantCenterX - centerX, 2) + 
+                Math.pow(plantCenterY - centerY, 2)
+            );
+            
+            if (dist < closestDist) {
+                closestDist = dist;
+                closestPlant = plant;
+            }
+        });
+        
+        return closestPlant;
     }
 
     handleClick(x, y) {
@@ -77,6 +160,7 @@ class Bird {
             this.shoot(x, y);
         }
     }
+
 
     reset() {
         this.x = 200;
@@ -93,6 +177,8 @@ class Bird {
         this.invincibleTimer = 0;
         this.powerUpAnimation.active = false;
         this.projectiles = [];
+        this.autoShooting = false;
+        this.shootCooldown = 0;
         if (this.powerSoundLoop) {
             this.powerSoundLoop.pause();
             this.powerSoundLoop = null;
@@ -217,6 +303,61 @@ class Bird {
             this.game.gameOver = true;
         }
 
+        if (!this.game.gameOver && this.autoShooting) {
+            this.shootCooldown -= this.game.clockTick;
+            
+            if (this.shootCooldown <= 0) {
+                const targetPlant = this.findTargetPlant();
+                
+                if (targetPlant) {
+                    const background = this.game.entities.find(e => e instanceof BaseBackground);
+                    const plantCenterX = targetPlant.x + (background.snappingPlantFrameWidth * background.snappingPlantScale) / 2;
+                    const plantCenterY = targetPlant.type === "top" 
+                        ? targetPlant.y + background.snappingPlantTopFrameHeight * background.snappingPlantScale / 2
+                        : targetPlant.y + background.snappingPlantFrameHeight * background.snappingPlantScale / 2;
+                    
+                    const projectile = this.shoot(plantCenterX, plantCenterY);
+                    projectile.targetId = targetPlant.id; 
+                    this.shootCooldown = this.shootInterval;
+                }
+            }
+        }
+        
+        this.projectiles.forEach(proj => {
+            if (!proj.trail) proj.trail = [];
+            
+            if (this.game.clockTick % 0.05 < 0.01) {
+                proj.trail.push({x: proj.x, y: proj.y, radius: proj.radius * 0.8, life: 0.3});
+            }
+            
+            if (proj.trail.length > 10) {
+                proj.trail.shift();
+            }
+        });
+        
+        if (this.projectiles.length > 0) {
+            this.projectiles.forEach(proj => {
+                if (proj.trail) {
+                    for (let i = proj.trail.length - 1; i >= 0; i--) {
+                        proj.trail[i].life -= this.game.clockTick;
+                        proj.trail[i].radius *= 0.95;
+                        if (proj.trail[i].life <= 0) {
+                            proj.trail.splice(i, 1);
+                        }
+                    }
+                }
+            });
+        }
+        
+        if (this.muzzleFlashes) {
+            for (let i = this.muzzleFlashes.length - 1; i >= 0; i--) {
+                this.muzzleFlashes[i].life -= this.game.clockTick;
+                if (this.muzzleFlashes[i].life <= 0) {
+                    this.muzzleFlashes.splice(i, 1);
+                }
+            }
+        }
+
         this.updateProjectiles();
     }
 
@@ -278,12 +419,99 @@ class Bird {
             ctx.strokeText(`Power: ${Math.ceil(this.invincibleTimer)}s`, 400, 80);
             ctx.fillText(`Power: ${Math.ceil(this.invincibleTimer)}s`, 400, 80);
         }
-    
+        
+        this.projectiles.forEach(proj => {
+            if (proj.trail) {
+                proj.trail.forEach(trail => {
+                    ctx.beginPath();
+                    ctx.arc(trail.x, trail.y, trail.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255, 255, 0, ${trail.life})`;
+                    ctx.fill();
+                });
+            }
+        });
+        
         for (let proj of this.projectiles) {
+            ctx.save();
+            ctx.translate(proj.x, proj.y);
+            ctx.rotate(proj.angle);
+            
+            const gradientTrail = ctx.createLinearGradient(-20, 0, 0, 0);
+            gradientTrail.addColorStop(0, 'rgba(255, 50, 0, 0)');
+            gradientTrail.addColorStop(0.5, 'rgba(255, 150, 0, 0.4)');
+            gradientTrail.addColorStop(1, 'rgba(255, 255, 0, 0.7)');
+            
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-20, proj.radius * 1.2);
+            ctx.lineTo(-10, 0);
+            ctx.lineTo(-20, -proj.radius * 1.2);
+            ctx.closePath();
+            
+            ctx.fillStyle = gradientTrail;
+            ctx.fill();
+            ctx.restore();
+            
             ctx.beginPath();
             ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
-            ctx.fillStyle = 'yellow';
+            
+            const gradient = ctx.createRadialGradient(
+                proj.x, proj.y, 0,
+                proj.x, proj.y, proj.radius
+            );
+            gradient.addColorStop(0, 'white');
+            gradient.addColorStop(0.7, 'yellow');
+            gradient.addColorStop(1, 'orange');
+            
+            ctx.fillStyle = gradient;
             ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.radius * 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+            ctx.fill();
+        }
+        
+        if (this.muzzleFlashes) {
+            this.muzzleFlashes.forEach(flash => {
+                ctx.save();
+                ctx.translate(flash.x, flash.y);
+                ctx.rotate(flash.angle);
+                
+                const gradient = ctx.createRadialGradient(0, 0, 1, 0, 0, flash.radius);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+                gradient.addColorStop(0.2, 'rgba(255, 255, 0, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 150, 0, 0.6)');
+                gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, flash.radius, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                ctx.beginPath();
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const innerRadius = flash.radius * 0.5;
+                    const outerRadius = flash.radius * 1.5;
+                    
+                    ctx.lineTo(
+                        Math.cos(angle) * outerRadius,
+                        Math.sin(angle) * outerRadius
+                    );
+                    
+                    const halfAngle = angle + Math.PI / 8;
+                    ctx.lineTo(
+                        Math.cos(halfAngle) * innerRadius,
+                        Math.sin(halfAngle) * innerRadius
+                    );
+                }
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(255, 255, 200, 0.3)';
+                ctx.fill();
+                
+                ctx.restore();
+            });
         }
     }
 

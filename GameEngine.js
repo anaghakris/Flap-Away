@@ -7,7 +7,7 @@ class GameEngine {
         this.wheel = null;
         this.keys = {};
         this.options = options || { debugging: false };
-        this.currentLevel = 1; // Track the current level
+        this.currentLevel = 1; 
     }
 
     init(ctx) {
@@ -37,8 +37,14 @@ class GameEngine {
                 console.log("CLICK", clickPos);
             }
             this.click = clickPos;
+            
             this.entities.forEach(entity => {
-                if (entity.handleClick) {
+                if (entity.constructor.name === "Bird" && entity.autoShooting) {
+                    if (this.options.debugging) {
+                        console.log("Skipping Bird's handleClick due to auto-shooting");
+                    }
+                } 
+                else if (entity.handleClick) {
                     entity.handleClick(clickPos.x, clickPos.y);
                 }
             });

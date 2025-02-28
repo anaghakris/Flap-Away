@@ -31,7 +31,13 @@ class BaseBackground {
         this.chanceMessageTimer = 0;
         this.CHANCE_MESSAGE_DURATION = 2.0; 
 
-        // Event listener for keydown events.
+        // Plant explosions and death handling
+        this.plantExplosions = [];
+        this.plantDeathSound = ASSET_MANAGER.getAsset("./audio/sfx_hit.wav");
+        if (this.plantDeathSound) {
+            this.plantDeathSound.volume = 0.4;
+        }
+
         document.addEventListener('keydown', this.handleKeyDown.bind(this));
     }
 
@@ -168,6 +174,7 @@ class BaseBackground {
         this.evilWaveTriggered = false;
         this.evilWaveBirdsSpawned = 0;
         this.enemyBigBirds = [];
+        this.plantExplosions = [];
 
         if (this.pipeSpawnInterval) {
             clearInterval(this.pipeSpawnInterval);
@@ -294,34 +301,42 @@ class BaseBackground {
                 y: this.baseY - this.MUSHROOM_HEIGHT,
                 elapsedTime: 0,
                 frame: 0,
-                velocityY: 0 // Added property for vertical movement
+                velocityY: 0 
             });
         }
     
         const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
         if (this.level === 2 || this.pipePairCount % 2 === 0) {
             if (Math.random() < 0.5) {
+                const plantId = Date.now() + Math.random().toString(36).substr(2, 5);
                 const topPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
                 const topPlantY = topPipeHeight - this.snappingPlantTopFrameHeight * this.snappingPlantScale + 20;
                 this.snappingPlants.push({
+                    id: plantId,
                     x: topPlantX,
                     y: topPlantY,
                     elapsedTime: 0,
                     type: "top",
                     state: "IDLE",
-                    lastFrame: -1
+                    lastFrame: -1,
+                    isDead: false,
+                    deadTimer: 0
                 });
                 topPipe.hasPlant = true;
             } else {
+                const plantId = Date.now() + Math.random().toString(36).substr(2, 5);
                 const bottomPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
                 const bottomPlantY = bottomPipe.y - (this.snappingPlantFrameHeight * this.snappingPlantScale);
                 this.snappingPlants.push({
+                    id: plantId,
                     x: bottomPlantX,
                     y: bottomPlantY,
                     elapsedTime: 0,
                     type: "bottom",
                     state: "IDLE",
-                    lastFrame: -1
+                    lastFrame: -1,
+                    isDead: false,
+                    deadTimer: 0
                 });
                 bottomPipe.hasPlant = true;
             }
@@ -535,12 +550,9 @@ class BaseBackground {
         this.updateGameObjects();
         
         if (this.level === 2) {
-            // Update mushrooms with jump behavior
             this.mushrooms.forEach(mushroom => {
-                // Move mushroom left along with the pipe speed
                 mushroom.x -= this.pipeSpeed;
                 
-                // Check if the bird is near horizontally and the mushroom is on the ground
                 const bird = this.getBird();
                 if (bird) {
                     const mushroomCenterX = mushroom.x + this.MUSHROOM_WIDTH / 2;
@@ -552,18 +564,15 @@ class BaseBackground {
                     }
                 }
                 
-                // Apply gravity to the mushroom
-                const gravity = 20; // adjust gravity as needed
+                const gravity = 20; 
                 mushroom.velocityY += gravity * this.game.clockTick;
                 mushroom.y += mushroom.velocityY;
                 
-                // Prevent mushroom from falling below the base
                 if (mushroom.y > this.baseY - this.MUSHROOM_HEIGHT) {
                     mushroom.y = this.baseY - this.MUSHROOM_HEIGHT;
                     mushroom.velocityY = 0;
                 }
                 
-                // Update mushroom animation frames as before
                 mushroom.elapsedTime += this.game.clockTick;
                 if (mushroom.elapsedTime >= this.MUSHROOM_ANIMATION_DURATION) {
                     mushroom.elapsedTime = 0;
@@ -574,7 +583,99 @@ class BaseBackground {
         }
     
         this.handleCollisions();
+        
+        this.handleProjectileCollisions();
     }    
+
+    handleProjectileCollisions() {
+        const bird = this.getBird();
+        if (!bird || !bird.projectiles) return;
+        
+        for (let i = bird.projectiles.length - 1; i >= 0; i--) {
+            const projectile = bird.projectiles[i];
+            
+            for (let j = 0; j < this.snappingPlants.length; j++) {
+                const plant = this.snappingPlants[j];
+                if (plant.isDead) continue; 
+                
+                const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
+                const plantHeight = plant.type === "top" 
+                    ? this.snappingPlantTopFrameHeight * this.snappingPlantScale
+                    : this.snappingPlantFrameHeight * this.snappingPlantScale;
+                
+                if (
+                    projectile.x >= plant.x && 
+                    projectile.x <= plant.x + plantWidth &&
+                    projectile.y >= plant.y && 
+                    projectile.y <= plant.y + plantHeight
+                ) {
+                    bird.projectiles.splice(i, 1);
+                    
+                    plant.isDead = true;
+                    plant.deadTimer = 2; 
+                    
+                    this.createPlantExplosion(
+                        plant.x + plantWidth / 2, 
+                        plant.y + plantHeight / 2
+                    );
+                    
+                    if (this.plantDeathSound) {
+                        const deathSound = this.plantDeathSound.cloneNode();
+                        deathSound.volume = 0.4;
+                        deathSound.play().catch(e => console.log("Audio play failed:", e));
+                    }
+                    
+                    break; 
+                }
+            }
+        }
+    }
+
+    createPlantExplosion(x, y) {
+        const particleCount = 30 + Math.floor(Math.random() * 20);
+        const particles = [];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 1 + Math.random() * 5;
+            const size = 2 + Math.random() * 5;
+            const life = 0.5 + Math.random() * 1;
+            
+            particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: size,
+                life: life,
+                maxLife: life,
+                color: Math.random() < 0.7 ? 
+                    `rgb(${150 + Math.random() * 100}, ${50 + Math.random() * 50}, 0)` : 
+                    `rgb(${200 + Math.random() * 55}, ${200 + Math.random() * 55}, 0)`
+            });
+        }
+        
+        const shockwave = {
+            x: x,
+            y: y,
+            radius: 5,
+            maxRadius: 60,
+            life: 0.5,
+            maxLife: 0.5
+        };
+        
+        this.plantExplosions.push({
+            particles: particles,
+            shockwave: shockwave,
+            x: x,
+            y: y,
+            light: {
+                radius: 80,
+                intensity: 1,
+                life: 0.5
+            }
+        });
+    }
 
     updateGameObjects() {
         if (!this.evilWaveActive) {
@@ -585,14 +686,21 @@ class BaseBackground {
 
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
-            plant.elapsedTime += this.game.clockTick;
-            const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
-            if (frame === 3 && plant.lastFrame !== 3) {
-                this.playSound(this.plantChompSound);
-            }
-            plant.lastFrame = frame;
-            if (frame === this.snappingPlantFrameCount - 1) {
-                plant.elapsedTime = 0;
+            if (!plant.isDead) {
+                plant.elapsedTime += this.game.clockTick;
+                const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
+                if (frame === 3 && plant.lastFrame !== 3) {
+                    this.playSound(this.plantChompSound);
+                }
+                plant.lastFrame = frame;
+                if (frame === this.snappingPlantFrameCount - 1) {
+                    plant.elapsedTime = 0;
+                }
+            } else {
+                plant.deadTimer -= this.game.clockTick;
+                if (plant.deadTimer <= 0) {
+                    plant.isDead = false;
+                }
             }
         });
 
@@ -605,10 +713,48 @@ class BaseBackground {
             enemy.elapsedTime += this.game.clockTick;
         });
 
+        for (let i = this.plantExplosions.length - 1; i >= 0; i--) {
+            const explosion = this.plantExplosions[i];
+            
+            for (let j = explosion.particles.length - 1; j >= 0; j--) {
+                const particle = explosion.particles[j];
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vy += 0.1; 
+                particle.life -= this.game.clockTick;
+                
+                if (particle.life <= 0) {
+                    explosion.particles.splice(j, 1);
+                }
+            }
+            
+            if (explosion.shockwave) {
+                explosion.shockwave.life -= this.game.clockTick;
+                explosion.shockwave.radius = (1 - explosion.shockwave.life / explosion.shockwave.maxLife) * explosion.shockwave.maxRadius;
+                
+                if (explosion.shockwave.life <= 0) {
+                    explosion.shockwave = null;
+                }
+            }
+            
+            if (explosion.light) {
+                explosion.light.life -= this.game.clockTick;
+                explosion.light.intensity = explosion.light.life / 0.5;
+                
+                if (explosion.light.life <= 0) {
+                    explosion.light = null;
+                }
+            }
+            
+            if (explosion.particles.length === 0 && !explosion.shockwave && !explosion.light) {
+                this.plantExplosions.splice(i, 1);
+            }
+        }
+
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
         this.snappingPlants = this.snappingPlants.filter(plant => {
             const isOnScreen = plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0;
-            const hasCompletedAnimation = plant.elapsedTime >= this.snappingPlantFrameDuration * this.snappingPlantFrameCount;
+            const hasCompletedAnimation = !plant.isDead && plant.elapsedTime >= this.snappingPlantFrameDuration * this.snappingPlantFrameCount;
             return isOnScreen && !hasCompletedAnimation;
         });
         this.coins = this.coins.filter(coin => !coin.collected && coin.x + 50 > 0);
@@ -632,7 +778,7 @@ class BaseBackground {
             }
 
             for (const plant of this.snappingPlants) {
-                if (this.checkPlantCollision(bird, plant)) {
+                if (!plant.isDead && this.checkPlantCollision(bird, plant)) {
                     this.handleCollision(bird);
                     break;
                 }
@@ -853,7 +999,7 @@ class BaseBackground {
         });
 
         this.snappingPlants.forEach(plant => {
-            if (plant.elapsedTime < 0) return;
+            if (plant.elapsedTime < 0 || plant.isDead) return;
             const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
             const sprite = plant.type === "bottom" ? this.snappingPlantSprite : this.snappingPlantTop;
             ctx.drawImage(
@@ -864,6 +1010,46 @@ class BaseBackground {
                 this.snappingPlantFrameWidth * this.snappingPlantScale,
                 this.snappingPlantFrameHeight * this.snappingPlantScale
             );
+        });
+
+        // Draw plant explosions
+        this.plantExplosions.forEach(explosion => {
+            // Draw light effect
+            if (explosion.light) {
+                const gradient = ctx.createRadialGradient(
+                    explosion.x, explosion.y, 0,
+                    explosion.x, explosion.y, explosion.light.radius
+                );
+                
+                gradient.addColorStop(0, `rgba(255, 220, 50, ${explosion.light.intensity * 0.8})`);
+                gradient.addColorStop(0.5, `rgba(255, 100, 20, ${explosion.light.intensity * 0.4})`);
+                gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(explosion.x, explosion.y, explosion.light.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Draw shockwave
+            if (explosion.shockwave) {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${explosion.shockwave.life / explosion.shockwave.maxLife * 0.5})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(explosion.shockwave.x, explosion.shockwave.y, explosion.shockwave.radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            // Draw particles
+            explosion.particles.forEach(particle => {
+                ctx.fillStyle = particle.color;
+                ctx.globalAlpha = particle.life / particle.maxLife;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            ctx.globalAlpha = 1;
         });
 
         this.enemyBigBirds.forEach(enemy => {
