@@ -154,12 +154,6 @@ class Bird {
         return closestPlant;
     }
 
-    handleClick(x, y) {
-        const background = this.game.entities.find(e => e instanceof BaseBackground);
-        if (background && background.level === 2) {
-            this.shoot(x, y);
-        }
-    }
 
 
     reset() {
