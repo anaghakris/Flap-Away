@@ -68,7 +68,7 @@ class StartPage {
                     "• Navigate through pipes to score points",
                     "• You have 3 hearts - don't lose them all!",
                     "• Collect coins for power-up invincibility",
-                    "• In Level 2: Click to shoot at obstacles",
+                    "• In Level 2: autoshooting activated",
                     "• Watch out for snapping plants & evil birds",
                     "• Temporary invincibility after getting hit",
                     "• Collect all coins to progress levels",
