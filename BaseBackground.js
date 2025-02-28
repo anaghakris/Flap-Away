@@ -145,10 +145,11 @@ class BaseBackground {
         this.MUSHROOM_FRAME_HEIGHT = 335;
         this.MUSHROOM_ANIMATION_FRAMES = 2;
         this.MUSHROOM_ANIMATION_DURATION = 0.3;
-        this.MUSHROOM_SCALE = 0.25;
+        this.MUSHROOM_SCALE = 0.15;
         this.MUSHROOM_WIDTH = this.MUSHROOM_FRAME_WIDTH * this.MUSHROOM_SCALE;
         this.MUSHROOM_HEIGHT = this.MUSHROOM_FRAME_HEIGHT * this.MUSHROOM_SCALE;
     }
+    
 
     reset() {
         this.health = 3;
@@ -165,6 +166,7 @@ class BaseBackground {
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
+        this.mushrooms = []; 
         this.gameStarted = false;
         this.pipePairCount = 0;
         this.hasCollided = false;
@@ -282,27 +284,35 @@ class BaseBackground {
         const coinY = minY + Math.random() * (maxY - minY);
         this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed, this.coinSound));
     
+        // Mushroom group spawn logic.
         if (this.level === 2 && (this.pipePairCount + 1) % 3 === 0) {
-            let mushroomX;
+            const groupCount = Math.floor(Math.random() * 4) + 3; // Random count between 3 and 6.
+            const groupSpacing = 10; // Spacing between each mushroom.
+            let groupX;
             let attempts = 0;
+            // Determine a starting x-position ensuring the entire group fits on screen and avoids pipes.
             do {
-                mushroomX = Math.random() * (this.width - this.MUSHROOM_WIDTH);
+                groupX = Math.random() * (this.width - (groupCount * this.MUSHROOM_WIDTH + (groupCount - 1) * groupSpacing));
                 attempts++;
                 if (attempts > 10) break;
             } while (
-                this.pipeArray.some(pipe => 
+                this.pipeArray.some(pipe =>
                     pipe.type === 'bottom' &&
-                    mushroomX < pipe.x + pipe.width &&
-                    mushroomX + this.MUSHROOM_WIDTH > pipe.x
+                    groupX < pipe.x + pipe.width &&
+                    groupX + (groupCount * this.MUSHROOM_WIDTH + (groupCount - 1) * groupSpacing) > pipe.x
                 )
             );
-            this.mushrooms.push({
-                x: mushroomX,
-                y: this.baseY - this.MUSHROOM_HEIGHT,
-                elapsedTime: 0,
-                frame: 0,
-                velocityY: 0 
-            });
+            // Add each mushroom in the group with its offset.
+            for (let i = 0; i < groupCount; i++) {
+                let mushroomX = groupX + i * (this.MUSHROOM_WIDTH + groupSpacing);
+                this.mushrooms.push({
+                    x: mushroomX,
+                    y: this.baseY - this.MUSHROOM_HEIGHT,
+                    elapsedTime: 0,
+                    frame: 0,
+                    velocityY: 0
+                });
+            }
         }
     
         const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
@@ -348,6 +358,7 @@ class BaseBackground {
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
     }
+    
     
     triggerEvilWave() {
         if (this.evilWaveTimeouts) {
@@ -514,7 +525,7 @@ class BaseBackground {
         this.updateEnemyBirds();
     
         if (this.evilWaveActive &&
-            this.evilWaveBirdsSpawned >= 8 &&  
+            this.evilWaveBirdsSpawned >= 8 &&
             this.enemyBigBirds.length === 0 &&
             this.dangerDisplayTime <= 0) {
             this.evilWaveActive = false;
@@ -558,13 +569,15 @@ class BaseBackground {
                     const mushroomCenterX = mushroom.x + this.MUSHROOM_WIDTH / 2;
                     const birdCenterX = bird.x + this.BIRD_WIDTH / 2;
                     const dx = Math.abs(mushroomCenterX - birdCenterX);
-                    // If the horizontal distance is less than 150 and the mushroom is on the ground, jump
+                    // If the horizontal distance is less than 150 and the mushroom is on the ground, trigger a jump with variable speed.
                     if (dx < 150 && mushroom.y >= this.baseY - this.MUSHROOM_HEIGHT - 1) {
-                        mushroom.velocityY = -10;  // adjust jump speed as needed
+                        const minJumpSpeed = 8;   // minimum jump speed
+                        const maxJumpSpeed = 15;  // maximum jump speed
+                        mushroom.velocityY = - (Math.random() * (maxJumpSpeed - minJumpSpeed) + minJumpSpeed);
                     }
                 }
                 
-                const gravity = 20; 
+                const gravity = 20;
                 mushroom.velocityY += gravity * this.game.clockTick;
                 mushroom.y += mushroom.velocityY;
                 
@@ -581,11 +594,12 @@ class BaseBackground {
             });
             this.mushrooms = this.mushrooms.filter(m => m.x + this.MUSHROOM_WIDTH > 0);
         }
-    
+        
         this.handleCollisions();
         
         this.handleProjectileCollisions();
-    }    
+    }
+    
 
     handleProjectileCollisions() {
         const bird = this.getBird();
