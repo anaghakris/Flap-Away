@@ -28,7 +28,7 @@ ASSET_MANAGER.queueDownload("./Sprites/mushrooms/mushroom.png");
 ASSET_MANAGER.queueDownload("./Sprites/Background/Retro.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/level3pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/level3pipe.png");
-
+ASSET_MANAGER.queueDownload("./Sprites/Background/redbase.png");
 
 
 
