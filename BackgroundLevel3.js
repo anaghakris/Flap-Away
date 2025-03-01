@@ -2,7 +2,7 @@ class BackgroundLevel3 extends BaseBackground {
     constructor(game) {
         const assets = {
             background: "./Sprites/Background/Retro.png", 
-            base: "./Sprites/Background/redbase.png",
+            base: "./Sprites/Background/level3base.png",
             pipe: "./Sprites/Pipes/level3pipe.png",
             topPipe: "./Sprites/Pipes/level3pipe.png"
         };
