@@ -7,7 +7,7 @@ class CoinProgress {
 
         this.isInvincible = false;
         this.invincibilityStartTime = 0;
-        this.invincibilityDuration = 3000; 
+        this.invincibilityDuration = 1500; 
         this.titleScale = 1; 
         this.titleOpacity = 0; 
 
