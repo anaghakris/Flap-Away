@@ -10,6 +10,13 @@ class BackgroundLevel2 extends BaseBackground {
         
         let bird = this.getBird();
         if (bird) {
+            bird.invincible = false;
+            bird.invincibleTimer = 0;
+            if (bird.powerSoundLoop) {
+                bird.powerSoundLoop.pause();
+                bird.powerSoundLoop = null;
+            }
+            
             bird.sprite = ASSET_MANAGER.getAsset("./Sprites/Bird/bluebird_sprite_sheet.png");
             
             if (typeof bird.enableAutoShooting === 'function') {
@@ -23,6 +30,7 @@ class BackgroundLevel2 extends BaseBackground {
                 };
             }
         }
+
         
         const coinType = game.selectedCoinType || 'default';
         let coinCount = coinType === 'custom' ? 2 : 15;

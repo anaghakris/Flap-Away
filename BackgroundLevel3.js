@@ -10,6 +10,13 @@ class BackgroundLevel3 extends BaseBackground {
 
         let bird = this.getBird();
         if (bird) {
+            bird.invincible = false;
+            bird.invincibleTimer = 0;
+            if (bird.powerSoundLoop) {
+                bird.powerSoundLoop.pause();
+                bird.powerSoundLoop = null;
+            }
+            
             bird.sprite = ASSET_MANAGER.getAsset("./Sprites/Bird/redbird_sprite_sheet.png");
 
         }

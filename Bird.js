@@ -177,6 +177,16 @@ class Bird {
             this.powerSoundLoop.pause();
             this.powerSoundLoop = null;
         }
+        
+        this.invincibleEffects = {
+            glowRadius: 40,
+            glowOpacity: 0.6,
+            sparkleTimer: 0,
+            sparkles: [],
+            trailPoints: [],
+            maxTrailPoints: 10,
+            rainbowHue: 0
+        };
     }
 
     startGame() {

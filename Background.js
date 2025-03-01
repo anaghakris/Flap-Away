@@ -62,6 +62,13 @@ class Background extends BaseBackground {
         
         let bird = this.getBird();
         if (bird) {
+            bird.invincible = false;
+            bird.invincibleTimer = 0;
+            if (bird.powerSoundLoop) {
+                bird.powerSoundLoop.pause();
+                bird.powerSoundLoop = null;
+            }
+
             bird.changeSpriteSheet(ASSET_MANAGER.getAsset("./Sprites/Bird/bluebird_sprite_sheet.png"));
             
             console.log("Activating auto-shooting in transition to level 2");
@@ -257,6 +264,13 @@ class Background extends BaseBackground {
         
         let bird = this.getBird();
         if (bird) {
+            bird.invincible = false;
+            bird.invincibleTimer = 0;
+            if (bird.powerSoundLoop) {
+                bird.powerSoundLoop.pause();
+                bird.powerSoundLoop = null;
+            }
+            
             bird.changeSpriteSheet(ASSET_MANAGER.getAsset("./Sprites/Bird/redbird_sprite_sheet.png"));
 
             console.log("Level 3: Auto-shooting is disabled.");
