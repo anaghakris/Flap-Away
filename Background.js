@@ -246,7 +246,7 @@ class Background extends BaseBackground {
         this.enemyBigBirds = [];
         
         this.image = ASSET_MANAGER.getAsset("./Sprites/Background/Retro.png");
-        this.base = ASSET_MANAGER.getAsset("./Sprites/Background/base_night.png");
+        this.base = ASSET_MANAGER.getAsset("./Sprites/Background/level3base.png");
         this.pipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/level3pipe.png");
         this.topPipeSprite = ASSET_MANAGER.getAsset("./Sprites/Pipes/level3pipe.png");
     
