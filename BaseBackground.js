@@ -127,7 +127,7 @@ class BaseBackground {
         this.DANGER_DURATION = 1.0;
         this.evilWaveActive = false;
         this.evilWaveTriggered = false;
-        this.EVIL_WAVE_PIPE_COUNT = 5;
+        this.EVIL_WAVE_PIPE_COUNT = 17;
         this.evilWaveBirdsSpawned = 0;
         
         this.levelPassedMessageDuration = 3;
