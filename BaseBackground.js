@@ -719,28 +719,13 @@ class BaseBackground {
         if (!this.evilWaveActive) {
             this.pipeArray.forEach(pipe => {
                 pipe.x -= this.pipeSpeed;
-
-                // if (this.level === 3) {
-                //     this.snappingPlants.forEach(plant => {
-                //         if (pipe.type === 'top' && plant.type === 'top' && pipe.x === plant.x) {
-                //             plant.x -= this.pipeSpeed;
-                //             const verticalOffset = Math.sin(pipe.movingTime * this.PIPE_VERTICAL_SPEED) * this.PIPE_VERTICAL_RANGE;
-                //             plant.y = pipe.y + verticalOffset;  // Move the plant with the pipe
-                //         }
-                //         else if (pipe.type === 'bottom' && plant.type === 'bottom' && pipe.x === plant.x) {
-                //             plant.x -= this.pipeSpeed;
-                //             const verticalOffset = Math.sin(pipe.movingTime * this.PIPE_VERTICAL_SPEED) * this.PIPE_VERTICAL_RANGE;
-                //             plant.y = pipe.y + verticalOffset;  // Move the plant with the pipe
-                //         }
-                //     });
-                // }
     
                 if (this.level === 3 && pipe.isMoving) {
                     pipe.movingTime += this.game.clockTick;
                     const verticalOffset = Math.sin(pipe.movingTime * this.PIPE_VERTICAL_SPEED) * this.PIPE_VERTICAL_RANGE;
     
                     if (pipe.type === 'top') {
-                        pipe.y = 10;
+                        pipe.y = 2;
                         pipe.height = pipe.originalTopHeight - verticalOffset;
                     } else {
                         pipe.y = pipe.originalY + verticalOffset;
