@@ -1075,10 +1075,7 @@ class BaseBackground {
                 );
                 
                 // Add visual indicator for moving pipes in level 3
-                if (pipe.isMoving && this.level === 3) {
-                    // Create a glowing outline at the edge of the pipe
-                    ctx.fillStyle = 'rgba(255, 255, 0, 0.3)'; // Yellow glow
-                    ctx.fillRect(-pipe.width / 2, 0, pipe.width, 10); // Glowing edge
+                if (pipe.isMoving && this.level === 3) {       
                     
                     // Add a subtle pulsing effect based on the pipe's movement
                     const pulseSize = 3 + Math.sin(pipe.movingTime * 5) * 2;
