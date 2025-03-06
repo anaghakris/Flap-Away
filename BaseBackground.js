@@ -251,8 +251,7 @@ class BaseBackground {
             const extraSpacing = 10;
             minOpening = this.minOpeningSnapping + extraSpacing;
             maxOpening = this.maxOpeningSnapping + extraSpacing;
-        }
-        else {
+        } else {
             minOpening = hasSnappingPlant ? this.minOpeningSnapping : this.minOpeningRegular;
             maxOpening = hasSnappingPlant ? this.maxOpeningSnapping : this.maxOpeningRegular;
         }
@@ -298,13 +297,11 @@ class BaseBackground {
         const coinY = minY + Math.random() * (maxY - minY);
         this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed, this.coinSound));
     
-        // Mushroom group spawn logic.
         if (this.level === 2 && (this.pipePairCount + 1) % 3 === 0) {
-            const groupCount = Math.floor(Math.random() * 4) + 3; // Random count between 3 and 6.
-            const groupSpacing = 10; // Spacing between each mushroom.
+            const groupCount = Math.floor(Math.random() * 4) + 3;
+            const groupSpacing = 10;
             let groupX;
             let attempts = 0;
-            // Determine a starting x-position ensuring the entire group fits on screen and avoids pipes.
             do {
                 groupX = Math.random() * (this.width - (groupCount * this.MUSHROOM_WIDTH + (groupCount - 1) * groupSpacing));
                 attempts++;
@@ -316,7 +313,6 @@ class BaseBackground {
                     groupX + (groupCount * this.MUSHROOM_WIDTH + (groupCount - 1) * groupSpacing) > pipe.x
                 )
             );
-            // Add each mushroom in the group with its offset.
             for (let i = 0; i < groupCount; i++) {
                 let mushroomX = groupX + i * (this.MUSHROOM_WIDTH + groupSpacing);
                 this.mushrooms.push({
@@ -344,7 +340,8 @@ class BaseBackground {
                     state: "IDLE",
                     lastFrame: -1,
                     isDead: false,
-                    deadTimer: 0
+                    deadTimer: 0,
+                    pipe: topPipe // Link to top pipe
                 });
                 topPipe.hasPlant = true;
             } else {
@@ -360,7 +357,8 @@ class BaseBackground {
                     state: "IDLE",
                     lastFrame: -1,
                     isDead: false,
-                    deadTimer: 0
+                    deadTimer: 0,
+                    pipe: bottomPipe // Link to bottom pipe
                 });
                 bottomPipe.hasPlant = true;
             }
@@ -372,7 +370,6 @@ class BaseBackground {
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
     }
-
     
     triggerEvilWave() {
         if (this.evilWaveTimeouts) {
@@ -734,9 +731,21 @@ class BaseBackground {
                 }
             });
         }
-
+    
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
+    
+            // Update plant position based on pipe movement in Level 3
+            if (this.level === 3 && plant.pipe && plant.pipe.isMoving) {
+                if (plant.type === "top") {
+                    const plantHeight = this.snappingPlantTopFrameHeight * this.snappingPlantScale;
+                    plant.y = plant.pipe.y + plant.pipe.height - plantHeight + 20;
+                } else {
+                    const plantHeight = this.snappingPlantFrameHeight * this.snappingPlantScale;
+                    plant.y = plant.pipe.y - plantHeight;
+                }
+            }
+    
             if (!plant.isDead) {
                 plant.elapsedTime += this.game.clockTick;
                 const frame = Math.floor(plant.elapsedTime / this.snappingPlantFrameDuration) % this.snappingPlantFrameCount;
@@ -754,54 +763,54 @@ class BaseBackground {
                 }
             }
         });
-
+    
         this.coins.forEach(coin => {
             coin.update();
         });
-
+    
         this.enemyBigBirds.forEach(enemy => {
             enemy.x -= this.enemyBigBirdSpeed;
             enemy.elapsedTime += this.game.clockTick;
         });
-
+    
         for (let i = this.plantExplosions.length - 1; i >= 0; i--) {
             const explosion = this.plantExplosions[i];
-            
+    
             for (let j = explosion.particles.length - 1; j >= 0; j--) {
                 const particle = explosion.particles[j];
                 particle.x += particle.vx;
                 particle.y += particle.vy;
-                particle.vy += 0.1; 
+                particle.vy += 0.1;
                 particle.life -= this.game.clockTick;
-                
+    
                 if (particle.life <= 0) {
                     explosion.particles.splice(j, 1);
                 }
             }
-            
+    
             if (explosion.shockwave) {
                 explosion.shockwave.life -= this.game.clockTick;
                 explosion.shockwave.radius = (1 - explosion.shockwave.life / explosion.shockwave.maxLife) * explosion.shockwave.maxRadius;
-                
+    
                 if (explosion.shockwave.life <= 0) {
                     explosion.shockwave = null;
                 }
             }
-            
+    
             if (explosion.light) {
                 explosion.light.life -= this.game.clockTick;
                 explosion.light.intensity = explosion.light.life / 0.5;
-                
+    
                 if (explosion.light.life <= 0) {
                     explosion.light = null;
                 }
             }
-            
+    
             if (explosion.particles.length === 0 && !explosion.shockwave && !explosion.light) {
                 this.plantExplosions.splice(i, 1);
             }
         }
-
+    
         this.pipeArray = this.pipeArray.filter(pipe => pipe.x + pipe.width > 0);
         this.snappingPlants = this.snappingPlants.filter(plant => {
             const isOnScreen = plant.x + (this.snappingPlantFrameWidth * this.snappingPlantScale) > 0;
