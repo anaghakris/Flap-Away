@@ -239,28 +239,31 @@ class BaseBackground {
     spawnPipePair() {
         if (!this.gameStarted || this.game.gameOver || this.evilWaveActive || this.postEvilWaveDelayTimer > 0)
             return;
-    
         const hasSnappingPlant = this.pipePairCount % 2 === 0;
         let minOpening, maxOpening;
-    
+        let isNarrowPipeInLevel3 = false;
         if (this.level === 2) {
             const extraSpacing = 5;
             minOpening = this.minOpeningSnapping + extraSpacing;
             maxOpening = this.maxOpeningSnapping + extraSpacing;
         } else if (this.level === 3) {
-            const extraSpacing = 10;
-            minOpening = this.minOpeningSnapping + extraSpacing;
-            maxOpening = this.maxOpeningSnapping + extraSpacing;
+            if (this.pipePairCount % 3 === 0) {
+                minOpening = 30;
+                maxOpening = 30;
+                isNarrowPipeInLevel3 = true;
+            } else {
+                const extraSpacing = 10;
+                minOpening = this.minOpeningSnapping + extraSpacing;
+                maxOpening = this.maxOpeningSnapping + extraSpacing;
+            }
         } else {
             minOpening = hasSnappingPlant ? this.minOpeningSnapping : this.minOpeningRegular;
             maxOpening = hasSnappingPlant ? this.maxOpeningSnapping : this.maxOpeningRegular;
         }
-    
         const opening = minOpening + Math.random() * (maxOpening - minOpening);
         const minTopPipeHeight = 50;
         const maxTopPipeHeight = this.baseY - opening - 100;
         const topPipeHeight = minTopPipeHeight + Math.random() * (maxTopPipeHeight - minTopPipeHeight);
-    
         const topPipe = {
             x: this.width,
             y: 0,
@@ -272,9 +275,9 @@ class BaseBackground {
             movingTime: 0,
             movingDirection: Math.random() < 0.5 ? 1 : -1,
             originalTopHeight: topPipeHeight,
-            originalOpening: opening
+            originalOpening: opening,
+            verticalRange: this.PIPE_VERTICAL_RANGE
         };
-    
         const bottomPipe = {
             x: this.width,
             y: topPipeHeight + opening,
@@ -285,18 +288,30 @@ class BaseBackground {
             isMoving: this.level === 3,
             movingTime: 0,
             movingDirection: topPipe.movingDirection * -1,
-            originalY: topPipeHeight + opening
+            originalY: topPipeHeight + opening,
+            verticalRange: this.PIPE_VERTICAL_RANGE
         };
-    
+        if (this.level === 3 && isNarrowPipeInLevel3) {
+            topPipe.isNarrow = true;
+            bottomPipe.isNarrow = true;
+            topPipe.isMoving = true;
+            bottomPipe.isMoving = true;
+            topPipe.pairId = this.pipePairCount;
+            bottomPipe.pairId = this.pipePairCount;
+            const minTopPipeHeightNarrow = 50;
+            const maxTopPipeHeightNarrow = this.baseY - 30 - 50;
+            const newTopPipeHeight = minTopPipeHeightNarrow + Math.random() * (maxTopPipeHeightNarrow - minTopPipeHeightNarrow);
+            topPipe.height = newTopPipeHeight;
+            bottomPipe.y = topPipe.y + newTopPipeHeight + 30;
+            bottomPipe.height = this.baseY - bottomPipe.y;
+        }
         this.pipeArray.push(topPipe, bottomPipe);
-    
         const minDistanceFromPipe = 100;
         const coinX = topPipe.x + this.pipeWidth + minDistanceFromPipe + Math.random() * this.pipeWidth;
         const maxY = this.baseY - 50;
         const minY = 50;
         const coinY = minY + Math.random() * (maxY - minY);
         this.coins.push(new Coin(this.game, coinX, coinY, this.pipeSpeed, this.coinSound));
-    
         if (this.level === 2 && (this.pipePairCount + 1) % 3 === 0) {
             const groupCount = Math.floor(Math.random() * 4) + 3;
             const groupSpacing = 10;
@@ -324,9 +339,9 @@ class BaseBackground {
                 });
             }
         }
-    
         const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
-        if (this.level === 2 || this.level === 3 || this.pipePairCount % 2 === 0) {
+        if ((this.level === 2 || this.level === 3 || this.pipePairCount % 2 === 0) &&
+            !(this.level === 3 && isNarrowPipeInLevel3)) {
             if (Math.random() < 0.5) {
                 const plantId = Date.now() + Math.random().toString(36).substr(2, 5);
                 const topPlantX = this.width + (this.pipeWidth - plantWidth) / 2;
@@ -341,7 +356,7 @@ class BaseBackground {
                     lastFrame: -1,
                     isDead: false,
                     deadTimer: 0,
-                    pipe: topPipe // Link to top pipe
+                    pipe: topPipe
                 });
                 topPipe.hasPlant = true;
             } else {
@@ -358,18 +373,20 @@ class BaseBackground {
                     lastFrame: -1,
                     isDead: false,
                     deadTimer: 0,
-                    pipe: bottomPipe // Link to bottom pipe
+                    pipe: bottomPipe
                 });
                 bottomPipe.hasPlant = true;
             }
         }
-    
         this.pipePairCount++;
         if (!this.evilWaveTriggered && this.pipePairCount === this.EVIL_WAVE_PIPE_COUNT) {
             this.triggerEvilWave();
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
     }
+    
+    
+    
     
     triggerEvilWave() {
         if (this.evilWaveTimeouts) {
@@ -718,15 +735,73 @@ class BaseBackground {
                 pipe.x -= this.pipeSpeed;
     
                 if (this.level === 3 && pipe.isMoving) {
-                    pipe.movingTime += this.game.clockTick;
-                    const verticalOffset = Math.sin(pipe.movingTime * this.PIPE_VERTICAL_SPEED) * this.PIPE_VERTICAL_RANGE;
-    
-                    if (pipe.type === 'top') {
-                        pipe.y = 2;
-                        pipe.height = pipe.originalTopHeight - verticalOffset;
-                    } else {
-                        pipe.y = pipe.originalY + verticalOffset;
-                        pipe.height = this.baseY - (pipe.originalY + verticalOffset);
+                    const bird = this.getBird();
+                    const pipeCenterX = pipe.x + pipe.width/2;
+                    const birdDistance = pipeCenterX - (bird?.x || 0);
+
+                    // For narrow pipes (every 3rd pipe pair)
+                    if (pipe.isNarrow) {
+                        if (!pipe.phase) {
+                            // Initial closed state
+                            pipe.phase = 'closed';
+                            pipe.progress = 0;
+                            pipe.verticalOffset = 30; // Start with smallest gap
+                        }
+
+                        // Calculate activation distance based on scroll speed
+                        const activationDistance = 400;
+                        const deactivationDistance = -100;
+
+                        if (pipe.phase === 'closed' && birdDistance < activationDistance) {
+                            pipe.phase = 'opening';
+                        } else if (pipe.phase === 'open' && birdDistance < deactivationDistance) {
+                            pipe.phase = 'closing';
+                        }
+
+                        // Update pipe state
+                        switch(pipe.phase) {
+                            case 'opening':
+                                pipe.progress += this.game.clockTick * 1.5; // Opening speed
+                                if (pipe.progress >= 1) {
+                                    pipe.progress = 1;
+                                    pipe.phase = 'open';
+                                }
+                    break;
+                            case 'closing':
+                                pipe.progress -= this.game.clockTick * 2; // Closing speed
+                                if (pipe.progress <= 0) {
+                                    pipe.progress = 0;
+                                    pipe.phase = 'closed';
+                }
+                    break;
+                        }
+
+                        // Calculate vertical movement using easing function
+                        const easedProgress = this.easeInOutQuad(pipe.progress);
+                        pipe.verticalOffset = 30 + (0) * easedProgress; // 30-30 range (stays closed)
+                        
+                        // For bottom pipe in pair
+                        if (pipe.type === 'bottom') {
+                            const topPipe = this.pipeArray.find(p => p.pairId === pipe.pairId && p.type === 'top');
+                            if (topPipe) {
+                                const maxOpening = 120;
+                                const currentOpening = maxOpening * easedProgress;
+                                pipe.y = topPipe.y + topPipe.height + currentOpening;
+                                pipe.height = this.baseY - pipe.y;
+                            }
+                        }
+            } else {
+                        // Regular moving pipes (non-narrow)
+                        pipe.movingTime += this.game.clockTick;
+                        const verticalOffset = Math.sin(pipe.movingTime * this.PIPE_VERTICAL_SPEED) * pipe.verticalRange;
+                        
+            if (pipe.type === 'top') {
+                            pipe.y = 2;
+                            pipe.height = pipe.originalTopHeight - verticalOffset;
+            } else {
+                            pipe.y = pipe.originalY + verticalOffset;
+                            pipe.height = this.baseY - (pipe.originalY + verticalOffset);
+                        }
                     }
                 }
             });
@@ -735,7 +810,6 @@ class BaseBackground {
         this.snappingPlants.forEach(plant => {
             plant.x -= this.pipeSpeed;
     
-            // Update plant position based on pipe movement in Level 3
             if (this.level === 3 && plant.pipe && plant.pipe.isMoving) {
                 if (plant.type === "top") {
                     const plantHeight = this.snappingPlantTopFrameHeight * this.snappingPlantScale;
@@ -1315,5 +1389,10 @@ class BaseBackground {
                 this.reset();
             }
         }
+    }
+
+    // Add easing function for smooth animation
+    easeInOutQuad(t) {
+        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
     }
 }
