@@ -22,7 +22,7 @@ class BackgroundLevel3 extends BaseBackground {
         }
 
         const coinType = game.selectedCoinType || 'default';
-        let coinCount = coinType === 'custom' ? 2 : 20; 
+        let coinCount = coinType === 'custom' ? 2 : 10; 
         this.coinProgress = new CoinProgress(game, 800, coinCount);
 
         this.levelTitleAnimation = {

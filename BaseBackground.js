@@ -21,7 +21,7 @@ class BaseBackground {
         this.initializeProperties();
         this.setupGameState();
         
-        this.coinProgress = new CoinProgress(game, this.width, level === 1 ? 2 : 8);
+        this.coinProgress = new CoinProgress(game, this.width, level === 1 ? 2 : 6);
         this.scoreManager = new ScoreManager(this.game);
 
         this.health = 3; 

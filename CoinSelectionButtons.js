@@ -76,16 +76,16 @@ class CoinSelectionButtons {
         } else {
             switch (background.level) {
                 case 1:
-                    coinCount = 8;
+                    coinCount = 6;
                     break;
                 case 2:
-                    coinCount = 15;
+                    coinCount = 8;
                     break;
                 case 3:
-                    coinCount = 20;
+                    coinCount = 10;
                     break;
                 default:
-                    coinCount = 8;
+                    coinCount = 6;
                     break;
             }
         }

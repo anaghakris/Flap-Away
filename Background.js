@@ -7,7 +7,7 @@ class Background extends BaseBackground {
             topPipe: "./Sprites/Pipes/bottom pipe.png"
         };
         super(game, 1, assets);
-        this.coinProgress = new CoinProgress(game, 800, 8);
+        this.coinProgress = new CoinProgress(game, 800, 6);
         this.levelTitleAnimation = {
             active: false,
             timer: 0,
@@ -52,7 +52,7 @@ class Background extends BaseBackground {
         this.evilWaveTriggered = false;
 
         const coinType = this.game.selectedCoinType || 'default';
-        let coinCount = coinType === 'custom' ? 2 : 15;
+        let coinCount = coinType === 'custom' ? 2 : 8;
         
         this.coinProgress = new CoinProgress(this.game, 800, coinCount);
         
@@ -254,7 +254,7 @@ class Background extends BaseBackground {
         this.evilWaveTriggered = false;
     
         const coinType = this.game.selectedCoinType || 'default';
-        let coinCount = coinType === 'custom' ? 2 : 20;
+        let coinCount = coinType === 'custom' ? 2 : 10;
         
         this.coinProgress = new CoinProgress(this.game, 800, coinCount);
         
