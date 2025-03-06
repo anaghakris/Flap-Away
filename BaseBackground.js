@@ -1040,19 +1040,7 @@ class BaseBackground {
                     this.topPipeSprite,
                     0, 0, 55, 200,
                     -pipe.width / 2, 0, pipe.width, pipe.height
-                );
-                
-                // Add visual indicator for moving pipes in level 3
-                if (pipe.isMoving && this.level === 3) {       
-                    
-                    // Add a subtle pulsing effect based on the pipe's movement
-                    const pulseSize = 3 + Math.sin(pipe.movingTime * 5) * 2;
-                    ctx.fillStyle = 'rgba(255, 220, 50, 0.5)';
-                    ctx.beginPath();
-                    ctx.arc(-pipe.width / 2 + pipe.width/2, 15, pulseSize, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                
+                );              
                 ctx.restore();
             } else {
                 ctx.drawImage(
@@ -1060,15 +1048,6 @@ class BaseBackground {
                     0, 0, 55, 200,
                     pipe.x, pipe.y, pipe.width, pipe.height
                 );
-                
-                if (pipe.isMoving && this.level === 3) {
-                    
-                    const pulseSize = 3 + Math.sin(pipe.movingTime * 5) * 2;
-                    ctx.fillStyle = 'rgba(255, 220, 50, 0.5)';
-                    ctx.beginPath();
-                    ctx.arc(pipe.x + pipe.width/2, pipe.y + 15, pulseSize, 0, Math.PI * 2);
-                    ctx.fill();
-                }
             }
         });
     
