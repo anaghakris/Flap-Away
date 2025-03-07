@@ -181,6 +181,10 @@ class BaseBackground {
         this.snappingPlants = [];
         this.coins = [];
         this.mushrooms = []; 
+        this.enemyBigBirds = [];
+        this.enemyShooters = [];
+        this.enemyShooterProjectiles = [];
+        this.plantExplosions = [];
         this.gameStarted = false;
         this.pipePairCount = 0;
         this.hasCollided = false;
@@ -189,11 +193,7 @@ class BaseBackground {
         this.evilWaveActive = false;
         this.evilWaveTriggered = false;
         this.evilWaveBirdsSpawned = 0;
-        this.enemyBigBirds = [];
-        this.plantExplosions = [];
-        // Reset enemy shooters
-        this.enemyShooters = [];
-
+        
         if (this.pipeSpawnInterval) {
             clearInterval(this.pipeSpawnInterval);
         }
@@ -226,6 +226,8 @@ class BaseBackground {
         this.gameStarted = true;
         this.dangerDisplayTime = 0;
         this.enemyBigBirds = [];
+        this.enemyShooters = [];
+        this.enemyShooterProjectiles = [];
         this.evilWaveActive = false;
         this.evilWaveTriggered = false;
         this.evilWaveBirdsSpawned = 0;
@@ -237,6 +239,14 @@ class BaseBackground {
                 entity.startGame();
             }
         });
+
+        // --- FIXED: Only spawn an enemy shooter at the first start of level 3, not after reset ---
+        // We'll now rely on the pipePairCount condition in spawnPipePair to handle shooter spawning
+        if (this.level === 3 && this.enemyShooters.length === 0 && this.pipeArray.length === 0 && this.pipePairCount === 0) {
+            console.log("Initial game start for level 3 - spawning first shooter");
+            this.spawnEnemyShooter();
+        }
+        // -------------------------------------------------------------
     }
 
     setupPipeSpawning() {
@@ -394,11 +404,10 @@ class BaseBackground {
         }
         this.pipePairCount++;
 
-        // --- NEW: Every 5 pipes in Level 3, spawn an enemy shooter ---
-        if (this.level === 3 && this.pipePairCount > 0 && this.pipePairCount % 5 === 0) {
+        // Spawn an enemy shooter on the first pipe in Level 3 if none exists
+        if (this.level === 3 && this.pipePairCount === 1 && this.enemyShooters.length === 0) {
             this.spawnEnemyShooter();
         }
-        // -------------------------------------------------------------
 
         if (!this.evilWaveTriggered && this.pipePairCount === this.EVIL_WAVE_PIPE_COUNT) {
             this.triggerEvilWave();
@@ -409,18 +418,39 @@ class BaseBackground {
     // --- NEW: Spawn enemy shooter method ---
     spawnEnemyShooter() {
         const shootInterval = 2 + Math.random() * 2; // random between 2 and 4 seconds
+        
+        // Simply spawn at a reasonable height near the base
+        const baseOffset = 150; // Distance from the base
+        const yPosition = this.baseY - baseOffset;
+        
+        // Start them from the right side of the screen
+        const xPosition = this.width;
+        
+        // Clear existing shooters
+        this.enemyShooters = [];
+        
         const shooter = {
-            // Spawn off-screen on the left
-            x: - (this.enemyShooterWidth * this.enemyShooterScale),
-            // Random vertical position within the game area (above the base)
-            y: Math.random() * (this.baseY - this.enemyShooterHeight * this.enemyShooterScale),
+            // Start at the right side of the screen
+            x: xPosition,
+            // Position close to the base
+            y: yPosition,
             width: this.enemyShooterWidth * this.enemyShooterScale,
             height: this.enemyShooterHeight * this.enemyShooterScale,
             elapsedTime: 0,
-            shootTimer: shootInterval, // Start at the interval value so it fires immediately
-            shootInterval: shootInterval
+            shootTimer: shootInterval,
+            shootInterval: shootInterval,
+            // Start moving left
+            direction: -1,
+            // Set movement pattern
+            initialX: xPosition,
+            moveRange: 300, // How far to move in each direction
+            // Use simpler movement pattern
+            anchored: true
         };
         this.enemyShooters.push(shooter);
+        
+        // Debug message to confirm spawn
+        console.log("Enemy shooter spawned at", xPosition, yPosition);
     }
     
     // -------------------------------------------
@@ -506,6 +536,12 @@ class BaseBackground {
                 this.evilWaveActive = false;
                 this.levelPassedMessageTime = this.levelPassedMessageDuration;
                 this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
+                
+                // Clear enemy shooters when level 3 is completed (after evil wave)
+                if (this.level === 3) {
+                    this.enemyShooters = [];
+                    this.enemyShooterProjectiles = [];
+                }
             }, 2000);
         }
     }
@@ -929,9 +965,26 @@ class BaseBackground {
             enemy.elapsedTime += this.game.clockTick;
         });
     
-        // --- NEW: Update enemy shooters (move them right and animate) ---
+        // --- NEW: Update enemy shooters (move them back and forth and animate) ---
         this.enemyShooters.forEach(shooter => {
-            shooter.x += this.enemyShooterSpeed;
+            // Back and forth movement logic
+            if (shooter.anchored) {
+                // Move shooter based on current direction
+                shooter.x += this.enemyShooterSpeed * shooter.direction;
+                
+                // Check if shooter has reached its movement boundaries
+                if (shooter.direction < 0 && shooter.x <= this.width - shooter.moveRange) {
+                    // Reached left boundary, change direction to right
+                    shooter.direction = 1;
+                } else if (shooter.direction > 0 && shooter.x >= this.width) {
+                    // Reached right boundary, change direction to left
+                    shooter.direction = -1;
+                }
+            } else {
+                // If not anchored, just move right (original behavior)
+                shooter.x += this.enemyShooterSpeed;
+            }
+            
             shooter.elapsedTime += this.game.clockTick;
             
             // Update shooter shooting timer
@@ -941,8 +994,6 @@ class BaseBackground {
                 this.spawnEnemyShooterProjectile(shooter);
             }
         });
-        // Remove enemy shooters that have moved off the right side
-        this.enemyShooters = this.enemyShooters.filter(shooter => shooter.x < this.width);
         // -----------------------------------------------------
     
         // --- NEW: Update enemy shooter projectiles ---
@@ -1356,65 +1407,69 @@ class BaseBackground {
         });
     
         // --- NEW: Draw enemy shooters (only active in Level 3) ---
-        this.enemyShooters.forEach(shooter => {
-            const frameIndex = Math.floor(shooter.elapsedTime / this.enemyShooterFrameDuration) % this.enemyShooterFrameCount;
-            ctx.drawImage(
-                this.enemyShooterSprite,
-                frameIndex * this.enemyShooterWidth, 0,
-                this.enemyShooterWidth, this.enemyShooterHeight,
-                shooter.x, shooter.y, shooter.width, shooter.height
-            );
-        });
+        if (!this.game.gameOver) {
+            this.enemyShooters.forEach(shooter => {
+                const frameIndex = Math.floor(shooter.elapsedTime / this.enemyShooterFrameDuration) % this.enemyShooterFrameCount;
+                ctx.drawImage(
+                    this.enemyShooterSprite,
+                    frameIndex * this.enemyShooterWidth, 0,
+                    this.enemyShooterWidth, this.enemyShooterHeight,
+                    shooter.x, shooter.y, shooter.width, shooter.height
+                );
+            });
+        }
         // -----------------------------------------------------
     
         // --- NEW: Draw enemy shooter projectiles ---
-        this.enemyShooterProjectiles.forEach(projectile => {
-            // First draw the particles (trail)
-            projectile.particles.forEach(particle => {
-                const opacity = particle.life / particle.maxLife;
-                ctx.globalAlpha = opacity;
-                ctx.fillStyle = particle.color;
+        if (!this.game.gameOver) {
+            this.enemyShooterProjectiles.forEach(projectile => {
+                // First draw the particles (trail)
+                projectile.particles.forEach(particle => {
+                    const opacity = particle.life / particle.maxLife;
+                    ctx.globalAlpha = opacity;
+                    ctx.fillStyle = particle.color;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                ctx.globalAlpha = 1.0;
+                
+                // Draw the fireball with gradient
+                const gradient = ctx.createRadialGradient(
+                    projectile.x, projectile.y, 0,
+                    projectile.x, projectile.y, projectile.radius
+                );
+                
+                gradient.addColorStop(0, 'white'); // Hot center
+                gradient.addColorStop(0.3, projectile.colors.core); // Core
+                gradient.addColorStop(0.7, projectile.colors.mid); // Mid layer
+                gradient.addColorStop(1, projectile.colors.outer); // Outer layer
+                
+                ctx.fillStyle = gradient;
                 ctx.beginPath();
-                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
                 ctx.fill();
+                
+                // Add glow effect
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = projectile.colors.outer;
+                ctx.beginPath();
+                ctx.arc(projectile.x, projectile.y, projectile.radius * 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add pulsing effect based on elapsed time
+                const pulseSize = projectile.radius * (1 + 0.2 * Math.sin(projectile.elapsedTime * 10));
+                ctx.globalAlpha = 0.15;
+                ctx.fillStyle = 'rgba(255, 255, 150, 0.5)';
+                ctx.beginPath();
+                ctx.arc(projectile.x, projectile.y, pulseSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Reset global alpha
+                ctx.globalAlpha = 1.0;
             });
-            
-            ctx.globalAlpha = 1.0;
-            
-            // Draw the fireball with gradient
-            const gradient = ctx.createRadialGradient(
-                projectile.x, projectile.y, 0,
-                projectile.x, projectile.y, projectile.radius
-            );
-            
-            gradient.addColorStop(0, 'white'); // Hot center
-            gradient.addColorStop(0.3, projectile.colors.core); // Core
-            gradient.addColorStop(0.7, projectile.colors.mid); // Mid layer
-            gradient.addColorStop(1, projectile.colors.outer); // Outer layer
-            
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Add glow effect
-            ctx.globalAlpha = 0.3;
-            ctx.fillStyle = projectile.colors.outer;
-            ctx.beginPath();
-            ctx.arc(projectile.x, projectile.y, projectile.radius * 1.5, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Add pulsing effect based on elapsed time
-            const pulseSize = projectile.radius * (1 + 0.2 * Math.sin(projectile.elapsedTime * 10));
-            ctx.globalAlpha = 0.15;
-            ctx.fillStyle = 'rgba(255, 255, 150, 0.5)';
-            ctx.beginPath();
-            ctx.arc(projectile.x, projectile.y, pulseSize, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Reset global alpha
-            ctx.globalAlpha = 1.0;
-        });
+        }
         // -----------------------------------------------------
     
         this.plantExplosions.forEach(explosion => {
