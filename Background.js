@@ -314,6 +314,7 @@ class Background extends BaseBackground {
             this.levelTransitionCooldown = 3; 
         } else if (this.level === 2 && this.coinProgress.coinsCollected >= this.coinProgress.maxCoins) {
             this.transitionToLevel3();
+            this.levelTransitionCooldown = 3;
         }
     }
 
@@ -508,7 +509,27 @@ class Background extends BaseBackground {
 
     update() {
         super.update();
-        
+        if (this.level === 3 && 
+            this.evilWaveTriggered && 
+            !this.evilWaveActive && 
+            this.levelPassedMessageTime <= 0 && 
+            this.postEvilWaveDelayTimer <= 0 &&
+            !this.gameCompleted) {
+            
+            this.gameCompleted = true;
+            this.gameCompletedMessageTime = this.GAME_COMPLETED_DURATION;
+            
+            if (this.pipeSpawnInterval) {
+                clearInterval(this.pipeSpawnInterval);
+                this.pipeSpawnInterval = null;
+            }
+            
+            this.pipeArray = [];
+            this.snappingPlants = [];
+            this.enemyShooterProjectiles = [];
+            this.enemyShooters = [];
+        }
+
         if (this.score > this.bestScore) {
             this.bestScore = this.score;
             localStorage.setItem('flappyBestScore', this.bestScore);

@@ -64,6 +64,20 @@ class BaseBackground {
         // We'll add sound later
         // this.shockwaveSound = ASSET_MANAGER.getAsset("./audio/shockwave.wav");
 
+        this.gameCompleted = false;
+        this.gameCompletedMessageTime = 0;
+        this.GAME_COMPLETED_DURATION = 4.0;
+
+        this.victoryEffects = {
+            fireworks: [],
+            stars: [],
+            confettiColors: [
+                '#FF0000', '#00FF00', '#0000FF', '#FFFF00', 
+                '#FF00FF', '#00FFFF', '#FFA500', '#FF4500'
+            ],
+            confetti: []
+        };
+
     }
 
     playSound(sound) {
@@ -197,11 +211,11 @@ class BaseBackground {
         this.coins = [];
         this.enemyBigBirds = [];
         this.coinsForHeart = 0;
-        
+
         this.mushrooms = [];
         this.enemyShooters = [];
         this.enemyShooterProjectiles = [];
-        
+
         // Reset shockwave state
         this.shockwaveActive = false;
         this.shockwave.life = 0;
@@ -211,14 +225,14 @@ class BaseBackground {
         this.gameStarted = false;
         this.hasCollided = false;
         this.pipePairCount = 0;
-        
+
         this.dangerDisplayTime = 0;
         this.DANGER_DURATION = 1.0;
         this.evilWaveActive = false;
         this.evilWaveTriggered = false;
         this.EVIL_WAVE_PIPE_COUNT = 17;
         this.evilWaveBirdsSpawned = 0;
-        
+
         if (this.pipeSpawnInterval) {
             clearInterval(this.pipeSpawnInterval);
         }
@@ -245,6 +259,8 @@ class BaseBackground {
             }
         }
         this.game.gameOver = false;
+        this.gameCompleted = false;
+        this.gameCompletedMessageTime = 0;
     }
 
     startGame() {
@@ -556,13 +572,21 @@ class BaseBackground {
             };
             spawnNextBird();
         } else {
-            // For level 2 and 3, just show the level passed message after a short delay
             setTimeout(() => {
                 this.evilWaveActive = false;
-                this.levelPassedMessageTime = this.levelPassedMessageDuration;
-                this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
                 
-                // Clear enemy shooters when level 3 is completed (after evil wave)
+                if (this.level === 3) {
+                    this.gameCompleted = true;
+                    this.gameCompletedMessageTime = this.GAME_COMPLETED_DURATION;
+                    this.enemyShooters = [];
+                    this.enemyShooterProjectiles = [];
+                    this.snappingPlants = [];
+                    this.pipeArray = [];
+                } else {
+                    this.levelPassedMessageTime = this.levelPassedMessageDuration;
+                    this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
+                }
+                
                 if (this.level === 3) {
                     this.enemyShooters = [];
                     this.enemyShooterProjectiles = [];
@@ -665,6 +689,34 @@ class BaseBackground {
         if (!this.gameStarted || this.game.gameOver) return;
     
         const bird = this.getBird();
+        if (this.gameCompleted) {
+            if (this.gameCompletedMessageTime > 0) {
+                this.gameCompletedMessageTime -= this.game.clockTick;
+                if (this.gameCompletedMessageTime <= 0) {
+                    this.game.gameOver = true;
+                    this.game.gameCompleted = true; // New flag to indicate victory
+                    
+                    const bird = this.getBird();
+                    if (bird) {
+                        if (bird.y > this.height / 2) {
+                            bird.y = this.height / 2 - 50;
+                        }
+                        if (bird.powerSoundLoop) {
+                            bird.powerSoundLoop.pause();
+                            bird.powerSoundLoop = null;
+                        }
+                    }
+                }
+            }
+            return; // Skip rest of update when game is completed
+        }
+        
+        // The rest of your code continues here
+        if (this.game.gameCompleted) {
+            this.generateVictoryEffects();
+            this.updateVictoryEffects();
+        }
+    
         if (bird) {
             const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
             const birdBottom = birdTop + this.BIRD_HEIGHT;
@@ -1379,6 +1431,156 @@ class BaseBackground {
         }
     }
 
+    generateVictoryEffects() {
+        if (!this.game.gameCompleted) return;
+        
+        // Generate a new firework
+        if (Math.random() < 0.05) {
+            const x = Math.random() * this.width;
+            const y = this.height;
+            const targetY = 100 + Math.random() * 200;
+            
+            this.victoryEffects.fireworks.push({
+                x: x,
+                y: y,
+                targetY: targetY,
+                vx: (Math.random() - 0.5) * 1,
+                vy: -10 - Math.random() * 5,
+                exploded: false,
+                particles: [],
+                color: this.victoryEffects.confettiColors[
+                    Math.floor(Math.random() * this.victoryEffects.confettiColors.length)
+                ]
+            });
+        }
+        
+        // Generate stars
+        if (Math.random() < 0.1) {
+            const x = Math.random() * this.width;
+            const y = Math.random() * this.height / 2;
+            
+            this.victoryEffects.stars.push({
+                x: x,
+                y: y,
+                size: 1 + Math.random() * 3,
+                alpha: 0,
+                maxAlpha: 0.5 + Math.random() * 0.5,
+                fadeSpeed: 0.01 + Math.random() * 0.03,
+                phase: 'in' // 'in' or 'out'
+            });
+        }
+        
+        // Generate confetti
+        if (Math.random() < 0.1) {
+            for (let i = 0; i < 5; i++) {
+                const x = Math.random() * this.width;
+                const y = -20;
+                
+                this.victoryEffects.confetti.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: 2 + Math.random() * 3,
+                    size: 5 + Math.random() * 10,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotationSpeed: (Math.random() - 0.5) * 0.2,
+                    color: this.victoryEffects.confettiColors[
+                        Math.floor(Math.random() * this.victoryEffects.confettiColors.length)
+                    ]
+                });
+            }
+        }
+    }
+
+    updateVictoryEffects() {
+        // Update fireworks
+        for (let i = this.victoryEffects.fireworks.length - 1; i >= 0; i--) {
+            const firework = this.victoryEffects.fireworks[i];
+            
+            if (!firework.exploded) {
+                firework.x += firework.vx;
+                firework.y += firework.vy;
+                firework.vy += 0.2; // gravity
+                
+                // Check if reached apex
+                if (firework.vy >= 0 || firework.y <= firework.targetY) {
+                    firework.exploded = true;
+                    
+                    // Create explosion particles
+                    const particleCount = 50 + Math.floor(Math.random() * 50);
+                    for (let j = 0; j < particleCount; j++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = 2 + Math.random() * 3;
+                        
+                        firework.particles.push({
+                            x: firework.x,
+                            y: firework.y,
+                            vx: Math.cos(angle) * speed,
+                            vy: Math.sin(angle) * speed,
+                            life: 1,
+                            color: firework.color
+                        });
+                    }
+                }
+            } else {
+                // Update explosion particles
+                for (let j = firework.particles.length - 1; j >= 0; j--) {
+                    const particle = firework.particles[j];
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.vy += 0.1; // gravity
+                    particle.life -= 0.02;
+                    
+                    if (particle.life <= 0) {
+                        firework.particles.splice(j, 1);
+                    }
+                }
+                
+                // Remove firework if all particles are gone
+                if (firework.particles.length === 0) {
+                    this.victoryEffects.fireworks.splice(i, 1);
+                }
+            }
+        }
+        
+        // Update stars
+        for (let i = this.victoryEffects.stars.length - 1; i >= 0; i--) {
+            const star = this.victoryEffects.stars[i];
+            
+            if (star.phase === 'in') {
+                star.alpha += star.fadeSpeed;
+                if (star.alpha >= star.maxAlpha) {
+                    star.alpha = star.maxAlpha;
+                    star.phase = 'out';
+                }
+            } else {
+                star.alpha -= star.fadeSpeed;
+                if (star.alpha <= 0) {
+                    this.victoryEffects.stars.splice(i, 1);
+                }
+            }
+        }
+        
+        // Update confetti
+        for (let i = this.victoryEffects.confetti.length - 1; i >= 0; i--) {
+            const confetti = this.victoryEffects.confetti[i];
+            
+            confetti.x += confetti.vx;
+            confetti.y += confetti.vy;
+            confetti.rotation += confetti.rotationSpeed;
+            
+            // Add some wind effect
+            confetti.vx += (Math.random() - 0.5) * 0.1;
+            
+            // Remove if out of screen
+            if (confetti.y > this.height) {
+                this.victoryEffects.confetti.splice(i, 1);
+            }
+        }
+    }
+    
+
+
     getBird() {
         return this.game.entities.find(entity => entity instanceof Bird) || null;
     }
@@ -1677,10 +1879,16 @@ class BaseBackground {
             ctx.font = '60px "Press Start 2P"';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.strokeText(`LEVEL ${this.level} PASSED!`, 0, 0);
-            ctx.fillText(`LEVEL ${this.level} PASSED!`, 0, 0);
+            
+            // Only show level passed message for levels 1 and 2
+            if (this.level !== 3) {
+                ctx.strokeText(`LEVEL ${this.level} PASSED!`, 0, 0);
+                ctx.fillText(`LEVEL ${this.level} PASSED!`, 0, 0);
+            }
+            
             ctx.restore();
-        } else if (this.dangerDisplayTime > 0 && !this.game.gameOver && this.gameStarted) {
+        }
+        else if (this.dangerDisplayTime > 0 && !this.game.gameOver && this.gameStarted) {
             const alpha = Math.min(1, this.dangerDisplayTime * 2);
             const pulse = Math.sin(Date.now() / 100) * 0.3 + 1;
             ctx.save();
@@ -1879,6 +2087,31 @@ class BaseBackground {
                 ctx.shadowBlur = 0;
             }
         }
+        if (this.gameCompleted && this.gameCompletedMessageTime > 0) {
+            const alpha = Math.min(1, this.gameCompletedMessageTime * 2);
+            const pulse = Math.sin(Date.now() / 100) * 0.3 + 1;
+            ctx.save();
+            ctx.translate(this.width / 2, this.height / 3);
+            ctx.scale(pulse, pulse);
+            ctx.fillStyle = `rgba(50, 255, 50, ${alpha})`;
+            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.lineWidth = 4;
+            ctx.font = '60px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.strokeText('GAME COMPLETED!', 0, 0);
+            ctx.fillText('GAME COMPLETED!', 0, 0);
+            
+            // Add a second line
+            ctx.font = '30px "Press Start 2P"';
+            ctx.strokeText('CONGRATULATIONS!', 0, 60);
+            ctx.fillText('CONGRATULATIONS!', 0, 60);
+            ctx.restore();
+        }
+        if (this.game.gameCompleted) {
+            this.drawVictoryEffects(ctx);
+        }
+
     }
 
     drawGameOver(ctx) {
@@ -1887,7 +2120,7 @@ class BaseBackground {
         const panelHeight = 160;
         const panelX = (this.width - panelWidth) / 2;
         const panelY = (this.height - panelHeight) / 2 - 50;
-
+    
         ctx.fillStyle = colors.background;
         ctx.strokeStyle = colors.border;
         ctx.lineWidth = 4;
@@ -1904,80 +2137,168 @@ class BaseBackground {
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-
+    
+        // Change the title based on whether the game was completed or not
         ctx.font = '18px "Press Start 2P", monospace';
         ctx.fillStyle = colors.title.main;
         ctx.textAlign = 'center';
-        ctx.fillText('GAME OVER', panelX + panelWidth / 2, panelY + 30);
-
+        
+        if (this.game.gameCompleted) {
+            ctx.fillText('VICTORY!', panelX + panelWidth / 2, panelY + 30);
+        } else {
+            ctx.fillText('GAME OVER', panelX + panelWidth / 2, panelY + 30);
+        }
+    
         ctx.font = '16px "Press Start 2P", monospace';
         ctx.fillStyle = colors.title.main;
         ctx.fillText('SCORE', panelX + panelWidth / 2, panelY + 60);
-
+    
         ctx.fillStyle = colors.text;
         ctx.font = '20px "Press Start 2P", monospace';
         ctx.fillText(this.getBird()?.score.toString() || '0', panelX + panelWidth / 2, panelY + 90);
-
+    
         ctx.font = '16px "Press Start 2P", monospace';
         ctx.fillStyle = colors.title.main;
         ctx.fillText('BEST', panelX + panelWidth / 2, panelY + 120);
-
+    
         ctx.fillStyle = colors.text;
         ctx.font = '20px "Press Start 2P", monospace';
         const bestScore = this.scoreManager.getBestScore();
         ctx.fillText(bestScore.toString(), panelX + panelWidth / 2, panelY + 150);
+    
+        const menuBtnWidth = 240;
+        const menuBtnHeight = 40;
+        
+        // Only show the restart button if the game was not completed (game over by dying)
+        if (!this.game.gameCompleted) {
+            const btnWidth = 120;
+            const btnHeight = 40;
+            const btnX = (this.width - btnWidth) / 2;
+            const btnY = panelY + panelHeight + 10;
+            
+            ctx.fillStyle = colors.fill.start;
+            ctx.strokeStyle = colors.border;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(btnX + 10, btnY);
+            ctx.lineTo(btnX + btnWidth - 10, btnY);
+            ctx.quadraticCurveTo(btnX + btnWidth, btnY, btnX + btnWidth, btnY + 10);
+            ctx.lineTo(btnX + btnWidth, btnY + btnHeight - 10);
+            ctx.quadraticCurveTo(btnX + btnWidth, btnY + btnHeight, btnX + btnWidth - 10, btnY + btnHeight);
+            ctx.lineTo(btnX + 10, btnY + btnHeight);
+            ctx.quadraticCurveTo(btnX, btnY + btnHeight, btnX, btnY + btnHeight - 10);
+            ctx.lineTo(btnX, btnY + 10);
+            ctx.quadraticCurveTo(btnX, btnY, btnX + 10, btnY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+    
+            ctx.font = '16px "Press Start 2P", monospace';
+            ctx.fillStyle = colors.text;
+            ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
+            
+            // Position the menu button below the restart button
+            const menuBtnX = (this.width - menuBtnWidth) / 2;
+            const menuBtnY = btnY + btnHeight + 10;
+            
+            ctx.fillStyle = colors.fill.start;
+            ctx.strokeStyle = colors.border;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(menuBtnX + 10, menuBtnY);
+            ctx.lineTo(menuBtnX + menuBtnWidth - 10, menuBtnY);
+            ctx.quadraticCurveTo(menuBtnX + menuBtnWidth, menuBtnY, menuBtnX + menuBtnWidth, menuBtnY + 10);
+            ctx.lineTo(menuBtnX + menuBtnWidth, menuBtnY + menuBtnHeight - 10);
+            ctx.quadraticCurveTo(menuBtnX + menuBtnWidth, menuBtnY + menuBtnHeight, menuBtnX + menuBtnWidth - 10, menuBtnY + menuBtnHeight);
+            ctx.lineTo(menuBtnX + 10, menuBtnY + menuBtnHeight);
+            ctx.quadraticCurveTo(menuBtnX, menuBtnY + menuBtnHeight, menuBtnX, menuBtnY + menuBtnHeight - 10);
+            ctx.lineTo(menuBtnX, menuBtnY + 10);
+            ctx.quadraticCurveTo(menuBtnX, menuBtnY, menuBtnX + 10, menuBtnY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+    
+            ctx.font = '16px "Press Start 2P", monospace';
+            ctx.fillStyle = colors.text;
+            ctx.fillText('RETURN TO MENU', menuBtnX + menuBtnWidth / 2, menuBtnY + menuBtnHeight / 2 + 8);
+        } else {
+            // Only show the return to menu button centered when game is completed
+            const menuBtnX = (this.width - menuBtnWidth) / 2;
+            const menuBtnY = panelY + panelHeight + 20; // Position it a bit lower for better spacing
+            
+            ctx.fillStyle = colors.fill.start;
+            ctx.strokeStyle = colors.border;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(menuBtnX + 10, menuBtnY);
+            ctx.lineTo(menuBtnX + menuBtnWidth - 10, menuBtnY);
+            ctx.quadraticCurveTo(menuBtnX + menuBtnWidth, menuBtnY, menuBtnX + menuBtnWidth, menuBtnY + 10);
+            ctx.lineTo(menuBtnX + menuBtnWidth, menuBtnY + menuBtnHeight - 10);
+            ctx.quadraticCurveTo(menuBtnX + menuBtnWidth, menuBtnY + menuBtnHeight, menuBtnX + menuBtnWidth - 10, menuBtnY + menuBtnHeight);
+            ctx.lineTo(menuBtnX + 10, menuBtnY + menuBtnHeight);
+            ctx.quadraticCurveTo(menuBtnX, menuBtnY + menuBtnHeight, menuBtnX, menuBtnY + menuBtnHeight - 10);
+            ctx.lineTo(menuBtnX, menuBtnY + 10);
+            ctx.quadraticCurveTo(menuBtnX, menuBtnY, menuBtnX + 10, menuBtnY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+    
+            ctx.font = '16px "Press Start 2P", monospace';
+            ctx.fillStyle = colors.text;
+            ctx.fillText('RETURN TO MENU', menuBtnX + menuBtnWidth / 2, menuBtnY + menuBtnHeight / 2 + 8);
+        }
+    }
 
-        const btnWidth = 120;
-        const btnHeight = 40;
-        const btnX = (this.width - btnWidth) / 2;
-        const btnY = panelY + panelHeight + 10;
-
-        ctx.fillStyle = colors.fill.start;
-        ctx.strokeStyle = colors.border;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(btnX + 10, btnY);
-        ctx.lineTo(btnX + btnWidth - 10, btnY);
-        ctx.quadraticCurveTo(btnX + btnWidth, btnY, btnX + btnWidth, btnY + 10);
-        ctx.lineTo(btnX + btnWidth, btnY + btnHeight - 10);
-        ctx.quadraticCurveTo(btnX + btnWidth, btnY + btnHeight, btnX + btnWidth - 10, btnY + btnHeight);
-        ctx.lineTo(btnX + 10, btnY + btnHeight);
-        ctx.quadraticCurveTo(btnX, btnY + btnHeight, btnX, btnY + btnHeight - 10);
-        ctx.lineTo(btnX, btnY + 10);
-        ctx.quadraticCurveTo(btnX, btnY, btnX + 10, btnY);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.font = '16px "Press Start 2P", monospace';
-        ctx.fillStyle = colors.text;
-        ctx.fillText('RESTART', btnX + btnWidth / 2, btnY + btnHeight / 2 + 8);
-
-        const returnBtnWidth = 240;
-        const returnBtnHeight = 40;
-        const returnBtnX = (this.width - returnBtnWidth) / 2;
-        const returnBtnY = btnY + btnHeight + 10;
-
-        ctx.fillStyle = colors.fill.start;
-        ctx.strokeStyle = colors.border;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(returnBtnX + 10, returnBtnY);
-        ctx.lineTo(returnBtnX + returnBtnWidth - 10, returnBtnY);
-        ctx.quadraticCurveTo(returnBtnX + returnBtnWidth, returnBtnY, returnBtnX + returnBtnWidth, returnBtnY + 10);
-        ctx.lineTo(returnBtnX + returnBtnWidth, returnBtnY + returnBtnHeight - 10);
-        ctx.quadraticCurveTo(returnBtnX + returnBtnWidth, returnBtnY + returnBtnHeight, returnBtnX + returnBtnWidth - 10, returnBtnY + returnBtnHeight);
-        ctx.lineTo(returnBtnX + 10, returnBtnY + returnBtnHeight);
-        ctx.quadraticCurveTo(returnBtnX, returnBtnY + returnBtnHeight, returnBtnX, returnBtnY + returnBtnHeight - 10);
-        ctx.lineTo(returnBtnX, returnBtnY + 10);
-        ctx.quadraticCurveTo(returnBtnX, returnBtnY, returnBtnX + 10, returnBtnY);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.font = '16px "Press Start 2P", monospace';
-        ctx.fillStyle = colors.text;
-        ctx.fillText('RETURN TO MENU', returnBtnX + returnBtnWidth / 2, returnBtnY + returnBtnHeight / 2 + 8);
+    drawVictoryEffects(ctx) {
+        // Draw stars
+        this.victoryEffects.stars.forEach(star => {
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`;
+            ctx.fill();
+        });
+        
+        // Draw fireworks
+        this.victoryEffects.fireworks.forEach(firework => {
+            if (!firework.exploded) {
+                // Draw rocket
+                ctx.beginPath();
+                ctx.arc(firework.x, firework.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = 'white';
+                ctx.fill();
+                
+                // Draw trail
+                ctx.beginPath();
+                ctx.moveTo(firework.x, firework.y);
+                ctx.lineTo(firework.x - firework.vx * 3, firework.y - firework.vy * 3);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            } else {
+                // Draw explosion particles
+                firework.particles.forEach(particle => {
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${parseInt(particle.color.slice(1, 3), 16)}, 
+                                          ${parseInt(particle.color.slice(3, 5), 16)}, 
+                                          ${parseInt(particle.color.slice(5, 7), 16)}, 
+                                          ${particle.life})`;
+                    ctx.fill();
+                });
+            }
+        });
+        
+        // Draw confetti
+        this.victoryEffects.confetti.forEach(confetti => {
+            ctx.save();
+            ctx.translate(confetti.x, confetti.y);
+            ctx.rotate(confetti.rotation);
+            
+            ctx.fillStyle = confetti.color;
+            ctx.fillRect(-confetti.size / 2, -confetti.size / 4, confetti.size, confetti.size / 2);
+            
+            ctx.restore();
+        });
     }
 
     transitionToLevel2() {

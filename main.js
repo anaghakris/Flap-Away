@@ -47,6 +47,7 @@ ASSET_MANAGER.downloadAll(() => {
     gameEngine.isTransitioning = false;
     gameEngine.lastTransitionTime = 0; 
     gameEngine.currentState = 'menu'; 
+    gameEngine.gameCompleted = false; 
     
     window.gameEngine = gameEngine; 
     const coinButtons = new CoinSelectionButtons(gameEngine);
@@ -66,62 +67,97 @@ ASSET_MANAGER.downloadAll(() => {
         const clickY = e.clientY - rect.top;
 
         if (gameEngine.gameOver && !gameEngine.isTransitioning) {
-            const btnWidth = 120;
-            const btnHeight = 40;
             const panelY = (canvas.height - 160) / 2 - 50;
-            const btnX = (canvas.width - btnWidth) / 2;
-            const btnY = panelY + 160 + 10;
-
-            const menuBtnWidth = 240;
-            const menuBtnHeight = 40;
-            const menuBtnX = (canvas.width - menuBtnWidth) / 2;
-            const menuBtnY = btnY + btnHeight + 10;
-
-            if (clickX >= btnX && clickX <= btnX + btnWidth &&
-                clickY >= btnY && clickY <= btnY + btnHeight) {
+            
+            if (gameEngine.gameCompleted) {
+                const menuBtnWidth = 240;
+                const menuBtnHeight = 40;
+                const menuBtnX = (canvas.width - menuBtnWidth) / 2;
+                const menuBtnY = panelY + 160 + 20;
                 
-                if (gameEngine.currentState !== 'transitioning') {
-                    gameEngine.isTransitioning = true;
-                    gameEngine.currentState = 'transitioning';
-                    gameEngine.lastTransitionTime = currentTime;
-                    gameEngine.gameOver = false;
+                if (clickX >= menuBtnX && clickX <= menuBtnX + menuBtnWidth &&
+                    clickY >= menuBtnY && clickY <= menuBtnY + menuBtnHeight) {
+                    
+                    if (gameEngine.currentState !== 'transitioning') {
+                        gameEngine.isTransitioning = true;
+                        gameEngine.currentState = 'transitioning';
+                        gameEngine.lastTransitionTime = currentTime;
+                        gameEngine.gameOver = false;
+                        gameEngine.gameCompleted = false; 
 
-                    gameEngine.entities.forEach(entity => {
-                        if (entity.reset) {
-                            entity.reset();
-                        }
-                    });
+                        gameEngine.entities.forEach(entity => {
+                            if (entity.reset) {
+                                entity.reset();
+                            }
+                        });
+                        gameEngine.entities = [];
 
-                    setTimeout(() => {
-                        gameEngine.isTransitioning = false;
-                        gameEngine.currentState = 'playing';
-                    }, 200);
+                        const startPage = new StartPage(gameEngine);
+                        gameEngine.addEntity(startPage);
+
+                        setTimeout(() => {
+                            gameEngine.isTransitioning = false;
+                            gameEngine.currentState = 'menu';
+                        }, 200);
+                    }
                 }
-            } 
+            } else {
+                const btnWidth = 120;
+                const btnHeight = 40;
+                const btnX = (canvas.width - btnWidth) / 2;
+                const btnY = panelY + 160 + 10;
 
-            if (clickX >= menuBtnX && clickX <= menuBtnX + menuBtnWidth &&
-                clickY >= menuBtnY && clickY <= menuBtnY + menuBtnHeight) {
-                
-                if (gameEngine.currentState !== 'transitioning') {
-                    gameEngine.isTransitioning = true;
-                    gameEngine.currentState = 'transitioning';
-                    gameEngine.lastTransitionTime = currentTime;
-                    gameEngine.gameOver = false;
+                const menuBtnWidth = 240;
+                const menuBtnHeight = 40;
+                const menuBtnX = (canvas.width - menuBtnWidth) / 2;
+                const menuBtnY = btnY + btnHeight + 10;
 
-                    gameEngine.entities.forEach(entity => {
-                        if (entity.reset) {
-                            entity.reset();
-                        }
-                    });
-                    gameEngine.entities = [];
+                if (clickX >= btnX && clickX <= btnX + btnWidth &&
+                    clickY >= btnY && clickY <= btnY + btnHeight) {
+                    
+                    if (gameEngine.currentState !== 'transitioning') {
+                        gameEngine.isTransitioning = true;
+                        gameEngine.currentState = 'transitioning';
+                        gameEngine.lastTransitionTime = currentTime;
+                        gameEngine.gameOver = false;
 
-                    const startPage = new StartPage(gameEngine);
-                    gameEngine.addEntity(startPage);
+                        gameEngine.entities.forEach(entity => {
+                            if (entity.reset) {
+                                entity.reset();
+                            }
+                        });
 
-                    setTimeout(() => {
-                        gameEngine.isTransitioning = false;
-                        gameEngine.currentState = 'menu';
-                    }, 200);
+                        setTimeout(() => {
+                            gameEngine.isTransitioning = false;
+                            gameEngine.currentState = 'playing';
+                        }, 200);
+                    }
+                } 
+
+                if (clickX >= menuBtnX && clickX <= menuBtnX + menuBtnWidth &&
+                    clickY >= menuBtnY && clickY <= menuBtnY + menuBtnHeight) {
+                    
+                    if (gameEngine.currentState !== 'transitioning') {
+                        gameEngine.isTransitioning = true;
+                        gameEngine.currentState = 'transitioning';
+                        gameEngine.lastTransitionTime = currentTime;
+                        gameEngine.gameOver = false;
+
+                        gameEngine.entities.forEach(entity => {
+                            if (entity.reset) {
+                                entity.reset();
+                            }
+                        });
+                        gameEngine.entities = [];
+
+                        const startPage = new StartPage(gameEngine);
+                        gameEngine.addEntity(startPage);
+
+                        setTimeout(() => {
+                            gameEngine.isTransitioning = false;
+                            gameEngine.currentState = 'menu';
+                        }, 200);
+                    }
                 }
             }
         }
