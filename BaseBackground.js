@@ -23,12 +23,11 @@ class BaseBackground {
         this.enemyShooterFrameCount = 5;
         this.enemyShooterWidth = 1170;
         this.enemyShooterHeight = 830;
-        this.enemyShooterScale = 0.3; // adjust scale as needed
+        this.enemyShooterScale = 0.1; // adjust scale as needed
         this.enemyShooterFrameDuration = 0.1;
-        this.enemyShooterSpeed = 5; // speed at which it moves rightward
+        this.enemyShooterSpeed = 3; // speed at which it moves rightward
         this.enemyShooters = [];
-        // ----------------------------------------
-
+        this.enemyShooterProjectiles = []; // NEW: Array to store shooter projectiles
         this.setupSounds();
         this.initializeProperties();
         this.setupGameState();
@@ -409,6 +408,7 @@ class BaseBackground {
     
     // --- NEW: Spawn enemy shooter method ---
     spawnEnemyShooter() {
+        const shootInterval = 2 + Math.random() * 2; // random between 2 and 4 seconds
         const shooter = {
             // Spawn off-screen on the left
             x: - (this.enemyShooterWidth * this.enemyShooterScale),
@@ -416,11 +416,49 @@ class BaseBackground {
             y: Math.random() * (this.baseY - this.enemyShooterHeight * this.enemyShooterScale),
             width: this.enemyShooterWidth * this.enemyShooterScale,
             height: this.enemyShooterHeight * this.enemyShooterScale,
-            elapsedTime: 0
+            elapsedTime: 0,
+            shootTimer: shootInterval, // Start at the interval value so it fires immediately
+            shootInterval: shootInterval
         };
         this.enemyShooters.push(shooter);
     }
+    
     // -------------------------------------------
+    
+    // NEW: Method to spawn a projectile from an enemy shooter
+    spawnEnemyShooterProjectile(shooter) {
+        const bird = this.getBird();
+        if (!bird) return;
+        
+        // Get shooter center
+        const shooterCenterX = shooter.x + shooter.width / 2;
+        const shooterCenterY = shooter.y + shooter.height / 2;
+        
+        // Calculate bird center (using same offset as in collision methods)
+        const birdLeft = bird.x + this.BIRD_X_OFFSET;
+        const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        const birdCenterX = birdLeft + this.BIRD_WIDTH / 2;
+        const birdCenterY = birdTop + this.BIRD_HEIGHT / 2;
+        
+        const dx = birdCenterX - shooterCenterX;
+        const dy = birdCenterY - shooterCenterY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Define the projectile's speed (in pixels per second)
+        const speed = 700;
+        const vx = (dx / distance) * speed;
+        const vy = (dy / distance) * speed;
+        
+        const projectile = {
+            x: shooterCenterX,
+            y: shooterCenterY,
+            vx: vx * this.game.clockTick,
+            vy: vy * this.game.clockTick,
+            radius: 30 // Projectile radius
+        };
+        
+        this.enemyShooterProjectiles.push(projectile);
+    }
     
     triggerEvilWave() {
         if (this.evilWaveTimeouts) {
@@ -455,6 +493,7 @@ class BaseBackground {
             };
             spawnNextBird();
         } else {
+            // For level 2 and 3, just show the level passed message after a short delay
             setTimeout(() => {
                 this.evilWaveActive = false;
                 this.levelPassedMessageTime = this.levelPassedMessageDuration;
@@ -886,9 +925,30 @@ class BaseBackground {
         this.enemyShooters.forEach(shooter => {
             shooter.x += this.enemyShooterSpeed;
             shooter.elapsedTime += this.game.clockTick;
+            
+            // Update shooter shooting timer
+            shooter.shootTimer += this.game.clockTick;
+            if (shooter.shootTimer >= shooter.shootInterval) {
+                shooter.shootTimer = 0;
+                this.spawnEnemyShooterProjectile(shooter);
+            }
         });
         // Remove enemy shooters that have moved off the right side
         this.enemyShooters = this.enemyShooters.filter(shooter => shooter.x < this.width);
+        // -----------------------------------------------------
+    
+        // --- NEW: Update enemy shooter projectiles ---
+        this.enemyShooterProjectiles.forEach(projectile => {
+            projectile.x += projectile.vx;
+            projectile.y += projectile.vy;
+        });
+        // Remove projectiles that have gone off-screen
+        this.enemyShooterProjectiles = this.enemyShooterProjectiles.filter(projectile => {
+            return projectile.x + projectile.radius > 0 &&
+                projectile.x - projectile.radius < this.width &&
+                projectile.y + projectile.radius > 0 &&
+                projectile.y - projectile.radius < this.height;
+        });
         // -----------------------------------------------------
     
         for (let i = this.plantExplosions.length - 1; i >= 0; i--) {
@@ -982,6 +1042,16 @@ class BaseBackground {
                         this.handleCollision(bird);
                     }
                 });
+            }
+            
+            // NEW: Check collisions with enemy shooter projectiles
+            for (let i = this.enemyShooterProjectiles.length - 1; i >= 0; i--) {
+                const projectile = this.enemyShooterProjectiles[i];
+                if (this.checkProjectileCollisionWithBird(bird, projectile)) {
+                    this.handleCollision(bird);
+                    this.enemyShooterProjectiles.splice(i, 1); // Remove the projectile
+                    break;
+                }
             }
         }
 
@@ -1132,6 +1202,21 @@ class BaseBackground {
         );
     }
 
+    // NEW: Check collision between a bird and a projectile
+    checkProjectileCollisionWithBird(bird, projectile) {
+        const birdLeft = bird.x + this.BIRD_X_OFFSET;
+        const birdRight = birdLeft + this.BIRD_WIDTH;
+        const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        const birdBottom = birdTop + this.BIRD_HEIGHT;
+        
+        return (
+            projectile.x + projectile.radius > birdLeft &&
+            projectile.x - projectile.radius < birdRight &&
+            projectile.y + projectile.radius > birdTop &&
+            projectile.y - projectile.radius < birdBottom
+        );
+    }
+    
     handleCollision(bird) {
         this.playSound(this.hitSound);
         if (this.swooshSound) {
@@ -1233,6 +1318,15 @@ class BaseBackground {
                 this.enemyShooterWidth, this.enemyShooterHeight,
                 shooter.x, shooter.y, shooter.width, shooter.height
             );
+        });
+        // -----------------------------------------------------
+    
+        // --- NEW: Draw enemy shooter projectiles ---
+        this.enemyShooterProjectiles.forEach(projectile => {
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+            ctx.fill();
         });
         // -----------------------------------------------------
     
