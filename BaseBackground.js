@@ -17,6 +17,18 @@ class BaseBackground {
         this.mushroomSprite = ASSET_MANAGER.getAsset("./Sprites/mushrooms/mushroom.png");
         this.initializeMushroomProperties();
 
+        // --- NEW: Enemy Shooter for Level 3 ---
+        // This sprite sheet is 1215 x 830 with 5 frames (each frame 1215/5 = 243px wide).
+        this.enemyShooterSprite = ASSET_MANAGER.getAsset("./Sprites/Enemy/sprite_sheet.png");
+        this.enemyShooterFrameCount = 5;
+        this.enemyShooterWidth = 1170;
+        this.enemyShooterHeight = 830;
+        this.enemyShooterScale = 0.3; // adjust scale as needed
+        this.enemyShooterFrameDuration = 0.1;
+        this.enemyShooterSpeed = 5; // speed at which it moves rightward
+        this.enemyShooters = [];
+        // ----------------------------------------
+
         this.setupSounds();
         this.initializeProperties();
         this.setupGameState();
@@ -115,6 +127,7 @@ class BaseBackground {
         this.snappingPlants = [];
         this.coins = [];
         this.enemyBigBirds = [];
+        this.enemyShooters = [];
         this.coinsForHeart = 0;
         
         this.mushrooms = [];
@@ -179,6 +192,8 @@ class BaseBackground {
         this.evilWaveBirdsSpawned = 0;
         this.enemyBigBirds = [];
         this.plantExplosions = [];
+        // Reset enemy shooters
+        this.enemyShooters = [];
 
         if (this.pipeSpawnInterval) {
             clearInterval(this.pipeSpawnInterval);
@@ -379,14 +394,33 @@ class BaseBackground {
             }
         }
         this.pipePairCount++;
+
+        // --- NEW: Every 5 pipes in Level 3, spawn an enemy shooter ---
+        if (this.level === 3 && this.pipePairCount > 0 && this.pipePairCount % 5 === 0) {
+            this.spawnEnemyShooter();
+        }
+        // -------------------------------------------------------------
+
         if (!this.evilWaveTriggered && this.pipePairCount === this.EVIL_WAVE_PIPE_COUNT) {
             this.triggerEvilWave();
             this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
         }
     }
     
-    
-    
+    // --- NEW: Spawn enemy shooter method ---
+    spawnEnemyShooter() {
+        const shooter = {
+            // Spawn off-screen on the left
+            x: - (this.enemyShooterWidth * this.enemyShooterScale),
+            // Random vertical position within the game area (above the base)
+            y: Math.random() * (this.baseY - this.enemyShooterHeight * this.enemyShooterScale),
+            width: this.enemyShooterWidth * this.enemyShooterScale,
+            height: this.enemyShooterHeight * this.enemyShooterScale,
+            elapsedTime: 0
+        };
+        this.enemyShooters.push(shooter);
+    }
+    // -------------------------------------------
     
     triggerEvilWave() {
         if (this.evilWaveTimeouts) {
@@ -399,6 +433,7 @@ class BaseBackground {
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
+        this.enemyShooters = [];
         clearInterval(this.pipeSpawnInterval);
         this.pipeSpawnInterval = null;
 
@@ -847,6 +882,15 @@ class BaseBackground {
             enemy.elapsedTime += this.game.clockTick;
         });
     
+        // --- NEW: Update enemy shooters (move them right and animate) ---
+        this.enemyShooters.forEach(shooter => {
+            shooter.x += this.enemyShooterSpeed;
+            shooter.elapsedTime += this.game.clockTick;
+        });
+        // Remove enemy shooters that have moved off the right side
+        this.enemyShooters = this.enemyShooters.filter(shooter => shooter.x < this.width);
+        // -----------------------------------------------------
+    
         for (let i = this.plantExplosions.length - 1; i >= 0; i--) {
             const explosion = this.plantExplosions[i];
     
@@ -921,6 +965,13 @@ class BaseBackground {
 
             this.enemyBigBirds.forEach(enemy => {
                 if (this.checkEnemyBigBirdCollision(bird, enemy)) {
+                    this.handleCollision(bird);
+                }
+            });
+            
+            // Check collision with enemy shooters
+            this.enemyShooters.forEach(shooter => {
+                if (this.checkEnemyShooterCollision(bird, shooter)) {
                     this.handleCollision(bird);
                 }
             });
@@ -1060,6 +1111,27 @@ class BaseBackground {
         );
     }
 
+    checkEnemyShooterCollision(bird, shooter) {
+        const birdLeft = bird.x + this.BIRD_X_OFFSET;
+        const birdRight = birdLeft + this.BIRD_WIDTH;
+        const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        const birdBottom = birdTop + this.BIRD_HEIGHT;
+        
+        // Apply a smaller collision box for the shooter (60% of actual size)
+        const collisionPadding = shooter.width * 0.2;
+        const shooterLeft = shooter.x + collisionPadding;
+        const shooterRight = shooter.x + shooter.width - collisionPadding;
+        const shooterTop = shooter.y + collisionPadding;
+        const shooterBottom = shooter.y + shooter.height - collisionPadding;
+        
+        return (
+            birdRight > shooterLeft &&
+            birdLeft < shooterRight &&
+            birdBottom > shooterTop &&
+            birdTop < shooterBottom
+        );
+    }
+
     handleCollision(bird) {
         this.playSound(this.hitSound);
         if (this.swooshSound) {
@@ -1151,6 +1223,18 @@ class BaseBackground {
                 this.snappingPlantFrameHeight * this.snappingPlantScale
             );
         });
+    
+        // --- NEW: Draw enemy shooters (only active in Level 3) ---
+        this.enemyShooters.forEach(shooter => {
+            const frameIndex = Math.floor(shooter.elapsedTime / this.enemyShooterFrameDuration) % this.enemyShooterFrameCount;
+            ctx.drawImage(
+                this.enemyShooterSprite,
+                frameIndex * this.enemyShooterWidth, 0,
+                this.enemyShooterWidth, this.enemyShooterHeight,
+                shooter.x, shooter.y, shooter.width, shooter.height
+            );
+        });
+        // -----------------------------------------------------
     
         this.plantExplosions.forEach(explosion => {
             if (explosion.light) {

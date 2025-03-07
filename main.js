@@ -29,7 +29,7 @@ ASSET_MANAGER.queueDownload("./Sprites/Background/Retro.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/level3pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Pipes/level3pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Background/level3base.png");
-
+ASSET_MANAGER.queueDownload("./Sprites/Enemy/sprite_sheet.png");
 
 
 
