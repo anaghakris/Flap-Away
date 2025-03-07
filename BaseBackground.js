@@ -49,6 +49,21 @@ class BaseBackground {
             this.plantDeathSound.volume = 0.4;
         }
 
+        this.shockwave = {
+            x: 0,
+            y: 0,
+            radius: 0,
+            maxRadius: 250,
+            pulseRadius: 0,
+            life: 0,
+            maxLife: 10.0, // Changed from 3.0 to 10.0 to match invincibility duration
+            pulseFrequency: 8,
+            color: 'rgba(0, 180, 255, 0.6)',
+            pulseColor: 'rgba(100, 220, 255, 0.8)'
+        };
+        // We'll add sound later
+        // this.shockwaveSound = ASSET_MANAGER.getAsset("./audio/shockwave.wav");
+
     }
 
     playSound(sound) {
@@ -180,18 +195,28 @@ class BaseBackground {
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
-        this.mushrooms = []; 
         this.enemyBigBirds = [];
+        this.coinsForHeart = 0;
+        
+        this.mushrooms = [];
         this.enemyShooters = [];
         this.enemyShooterProjectiles = [];
-        this.plantExplosions = [];
-        this.gameStarted = false;
-        this.pipePairCount = 0;
-        this.hasCollided = false;
+        
+        // Reset shockwave state
+        this.shockwaveActive = false;
+        this.shockwave.life = 0;
+        this.shockwave.radius = 0;
+        this.shockwave.pulseRadius = 0;
 
+        this.gameStarted = false;
+        this.hasCollided = false;
+        this.pipePairCount = 0;
+        
         this.dangerDisplayTime = 0;
+        this.DANGER_DURATION = 1.0;
         this.evilWaveActive = false;
         this.evilWaveTriggered = false;
+        this.EVIL_WAVE_PIPE_COUNT = 17;
         this.evilWaveBirdsSpawned = 0;
         
         if (this.pipeSpawnInterval) {
@@ -749,6 +774,11 @@ class BaseBackground {
                 }
             });
             this.mushrooms = this.mushrooms.filter(m => m.x + this.MUSHROOM_WIDTH > 0);
+        }
+        
+        // Update shockwave effect (in level 3)
+        if (this.level === 3) {
+            this.updateShockwave();
         }
         
         this.handleCollisions();
@@ -1327,9 +1357,15 @@ class BaseBackground {
                 this.chanceMessageTimer = this.CHANCE_MESSAGE_DURATION;
                 bird.invincible = true;
                 bird.invincibleTimer = 2; 
-                
+
                 this.coinsForHeart = 0;
             }
+            
+            // Deactivate shockwave on collision
+            if (this.level === 3 && this.shockwaveActive) {
+                this.shockwaveActive = false;
+            }
+            
             if (this.health <= 0) {
                 this.game.gameOver = true;
                 this.game.hasCollided = true;
@@ -1589,6 +1625,70 @@ class BaseBackground {
             ctx.strokeText("Press Space to Start", this.width / 2, this.height / 2);
             ctx.fillText("Press Space to Start", this.width / 2, this.height / 2);
         }
+
+        // Draw shockwave effect (in level 3)
+        if (this.level === 3 && this.shockwaveActive) {
+            // Draw outer expanding ring
+            ctx.beginPath();
+            ctx.arc(this.shockwave.x, this.shockwave.y, this.shockwave.radius, 0, Math.PI * 2);
+            ctx.strokeStyle = this.shockwave.color;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Draw pulsing inner ring
+            ctx.beginPath();
+            ctx.arc(this.shockwave.x, this.shockwave.y, this.shockwave.pulseRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = this.shockwave.pulseColor;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw glow effect
+            const gradient = ctx.createRadialGradient(
+                this.shockwave.x, this.shockwave.y, 0,
+                this.shockwave.x, this.shockwave.y, this.shockwave.pulseRadius * 1.5
+            );
+            
+            gradient.addColorStop(0, 'rgba(150, 220, 255, 0.4)');
+            gradient.addColorStop(0.5, 'rgba(100, 200, 255, 0.2)');
+            gradient.addColorStop(1, 'rgba(50, 150, 255, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(this.shockwave.x, this.shockwave.y, this.shockwave.pulseRadius * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw timer display
+            const timeRemaining = Math.ceil(this.shockwave.life);
+            
+            // Position the timer above the player
+            const bird = this.getBird();
+            if (bird) {
+                const timerX = bird.x + this.BIRD_WIDTH / 2;
+                const timerY = bird.y - 25;
+                
+                // Draw background for timer
+                ctx.fillStyle = 'rgba(0, 40, 80, 0.7)';
+                ctx.beginPath();
+                ctx.roundRect(timerX - 20, timerY - 15, 40, 30, 8);
+                ctx.fill();
+                
+                // Draw border
+                ctx.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw timer text
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText(timeRemaining.toString(), timerX, timerY);
+                
+                // Draw "SHOCK" text above timer
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText("SHOCK", timerX, timerY - 20);
+            }
+        }
     }
 
     drawGameOver(ctx) {
@@ -1714,5 +1814,112 @@ class BaseBackground {
     // Add easing function for smooth animation
     easeInOutQuad(t) {
         return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    }
+
+    activateShockwavePowerup() {
+        const bird = this.getBird();
+        if (!bird) return;
+
+        this.shockwaveActive = true;
+        this.shockwave.x = bird.x + this.BIRD_WIDTH / 2;
+        this.shockwave.y = bird.y + this.BIRD_HEIGHT / 2;
+        this.shockwave.radius = 10;
+        this.shockwave.pulseRadius = 10;
+        this.shockwave.life = this.shockwave.maxLife;
+        
+        // Sound will be added later
+        /*
+        if (this.shockwaveSound) {
+            const shockwaveSoundClone = this.shockwaveSound.cloneNode();
+            shockwaveSoundClone.volume = 0.4;
+            shockwaveSoundClone.play().catch(e => console.log("Audio play failed:", e));
+        }
+        */
+        
+        // Add notification at the top of the screen - only show for 2 seconds
+        this.powerUpNotification = {
+            active: true,
+            timer: 0,
+            duration: 2, // Only show for 2 seconds
+            text: "INVINCIBILITY + SHOCKWAVE ACTIVE!"
+        };
+    }
+
+    updateShockwave() {
+        if (!this.shockwaveActive) return;
+        
+        const bird = this.getBird();
+        if (!bird) {
+            this.shockwaveActive = false;
+            return;
+        }
+        
+        // Update shockwave position to follow the bird
+        this.shockwave.x = bird.x + this.BIRD_WIDTH / 2;
+        this.shockwave.y = bird.y + this.BIRD_HEIGHT / 2;
+        
+        // Update shockwave life
+        this.shockwave.life -= this.game.clockTick;
+        if (this.shockwave.life <= 0) {
+            this.shockwaveActive = false;
+            return;
+        }
+        
+        // Calculate pulsing effect
+        const pulseProgress = Math.sin(this.shockwave.life * this.shockwave.pulseFrequency) * 0.5 + 0.5;
+        this.shockwave.pulseRadius = 30 + pulseProgress * 30;
+        
+        // Calculate outer radius based on lifetime (grows over time)
+        const lifeProgress = 1 - (this.shockwave.life / this.shockwave.maxLife);
+        this.shockwave.radius = lifeProgress * this.shockwave.maxRadius;
+        
+        // Repel enemy projectiles
+        this.repelEnemyProjectiles();
+    }
+    
+    repelEnemyProjectiles() {
+        if (!this.shockwaveActive) return;
+        
+        const shockwave = this.shockwave;
+        
+        this.enemyShooterProjectiles.forEach(projectile => {
+            // Calculate distance from projectile to shockwave center
+            const dx = projectile.x - shockwave.x;
+            const dy = projectile.y - shockwave.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Check if projectile is within shockwave radius
+            if (distance < shockwave.radius) {
+                // Calculate normalized direction vector from shockwave center to projectile
+                const dirX = dx / distance;
+                const dirY = dy / distance;
+                
+                // Calculate repulsion force (stronger as projectile gets closer to center)
+                const forceFactor = 1 - (distance / shockwave.radius);
+                // Increased repulsion force from 40 to 80 for more dramatic bounce effect
+                const repulsionForce = 80 * forceFactor * this.game.clockTick;
+                
+                // Apply repulsion force to projectile velocity
+                projectile.vx += dirX * repulsionForce;
+                projectile.vy += dirY * repulsionForce;
+                
+                // Update projectile angle for visual effects
+                projectile.angle = Math.atan2(projectile.vy, projectile.vx);
+                
+                // Add more dramatic visual effect to show repulsion
+                if (Math.random() < 0.5) { // Increased particle frequency
+                    projectile.particles.push({
+                        x: projectile.x,
+                        y: projectile.y,
+                        size: 10 + Math.random() * 10, // Larger particles
+                        life: 0.4, // Longer particle life
+                        maxLife: 0.4,
+                        vx: dirX * 3, // Faster particle movement
+                        vy: dirY * 3,
+                        color: shockwave.color
+                    });
+                }
+            }
+        });
     }
 }

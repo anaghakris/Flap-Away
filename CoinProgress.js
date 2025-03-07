@@ -40,8 +40,15 @@ class CoinProgress {
             if (this.coinsCollected >= this.maxCoins) {
                 const bird = this.game.entities.find(entity => entity instanceof Bird);
                 if (bird) {
+                    // Always activate invincibility regardless of level
                     bird.activatePowerUp();
-                    this.activateInvincibility(); 
+                    this.activateInvincibility();
+                    
+                    // If we're in level 3, also activate the shockwave powerup
+                    const background = this.game.entities.find(entity => entity instanceof BaseBackground);
+                    if (background && background.level === 3 && typeof background.activateShockwavePowerup === 'function') {
+                        background.activateShockwavePowerup();
+                    }
                 }
                 this.reset();
             }
@@ -49,8 +56,20 @@ class CoinProgress {
     }
 
     activateInvincibility() {
+        // Check if we're in level 3 - if so, don't show the invincibility notification
+        const background = this.game.entities.find(entity => entity instanceof BaseBackground);
+        const isLevel3 = background && background.level === 3;
+        
+        // Only set up the notification if not in level 3
         this.isInvincible = true;
         this.invincibilityStartTime = Date.now();
+        
+        // In level 3, we don't need to show the invincibility notification
+        // as it's combined with the shockwave notification
+        if (isLevel3) {
+            this.titleScale = 0;
+            this.titleOpacity = 0;
+        }
     }
 
     reset() {
@@ -94,47 +113,57 @@ class CoinProgress {
             const currentTime = Date.now();
             const elapsedTime = currentTime - this.invincibilityStartTime;
 
-            if (elapsedTime < 500) {
-                this.titleScale = 1 + (elapsedTime / 500) * 0.2; 
-                this.titleOpacity = Math.min(1, elapsedTime / 500); 
-            } else if (elapsedTime < this.invincibilityDuration - 500) {
-                this.titleScale = 1.2;
-                this.titleOpacity = 1;
-            } else if (elapsedTime < this.invincibilityDuration) {
-                const fadeOutProgress = (elapsedTime - (this.invincibilityDuration - 500)) / 500;
-                this.titleScale = 1.2 - fadeOutProgress * 1.5; 
-                this.titleOpacity = 1 - fadeOutProgress;
-            } else {
+            // Check if we're in level 3
+            const background = this.game.entities.find(entity => entity instanceof BaseBackground);
+            const isLevel3 = background && background.level === 3;
+            
+            // Only proceed with invincibility animation if not in level 3
+            if (!isLevel3) {
+                if (elapsedTime < 500) {
+                    this.titleScale = 1 + (elapsedTime / 500) * 0.2; 
+                    this.titleOpacity = Math.min(1, elapsedTime / 500); 
+                } else if (elapsedTime < this.invincibilityDuration - 500) {
+                    this.titleScale = 1.2;
+                    this.titleOpacity = 1;
+                } else if (elapsedTime < this.invincibilityDuration) {
+                    const fadeOutProgress = (elapsedTime - (this.invincibilityDuration - 500)) / 500;
+                    this.titleScale = 1.2 - fadeOutProgress * 1.5; 
+                    this.titleOpacity = 1 - fadeOutProgress;
+                } else {
+                    this.isInvincible = false;
+                    this.titleScale = 1;
+                    this.titleOpacity = 0;
+                }
+
+                const invincibilityTitleX = this.width / 2; 
+                const invincibilityTitleY = this.width / 2; 
+                const invincibilityTitleText = 'INVINCIBILITY ENABLED';
+
+                ctx.save();
+
+                ctx.translate(invincibilityTitleX, invincibilityTitleY);
+                ctx.scale(this.titleScale, this.titleScale);
+                ctx.globalAlpha = this.titleOpacity;
+
+                ctx.font = 'bold 40px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                ctx.fillStyle = this.colors.invincibilityTitle.shadow;
+                ctx.fillText(invincibilityTitleText, 2, 2);
+
+                ctx.fillStyle = this.colors.invincibilityTitle.main;
+                ctx.fillText(invincibilityTitleText, 0, 0);
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = this.colors.invincibilityTitle.outline;
+                ctx.strokeText(invincibilityTitleText, 0, 0);
+
+                ctx.restore();
+            } else if (elapsedTime >= this.invincibilityDuration) {
+                // Still need to update the invincibility state
                 this.isInvincible = false;
-                this.titleScale = 1;
-                this.titleOpacity = 0;
             }
-
-            const invincibilityTitleX = this.width / 2; 
-            const invincibilityTitleY = this.width / 2; 
-            const invincibilityTitleText = 'INVINCIBILITY ENABLED';
-
-            ctx.save();
-
-            ctx.translate(invincibilityTitleX, invincibilityTitleY);
-            ctx.scale(this.titleScale, this.titleScale);
-            ctx.globalAlpha = this.titleOpacity;
-
-            ctx.font = 'bold 40px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            ctx.fillStyle = this.colors.invincibilityTitle.shadow;
-            ctx.fillText(invincibilityTitleText, 2, 2);
-
-            ctx.fillStyle = this.colors.invincibilityTitle.main;
-            ctx.fillText(invincibilityTitleText, 0, 0);
-
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = this.colors.invincibilityTitle.outline;
-            ctx.strokeText(invincibilityTitleText, 0, 0);
-
-            ctx.restore();
         }
 
         ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
