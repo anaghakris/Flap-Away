@@ -454,7 +454,15 @@ class BaseBackground {
             y: shooterCenterY,
             vx: vx * this.game.clockTick,
             vy: vy * this.game.clockTick,
-            radius: 30 // Projectile radius
+            radius: 20, // Slightly smaller radius for better visuals
+            angle: Math.atan2(vy, vx), // Store angle for the fireball effect
+            elapsedTime: 0, // For animation
+            particles: [], // For the trail effect
+            colors: {
+                core: '#FF4500', // Orange-red
+                mid: '#FF9300', // Orange
+                outer: '#FFD700'  // Yellow/gold
+            }
         };
         
         this.enemyShooterProjectiles.push(projectile);
@@ -941,6 +949,44 @@ class BaseBackground {
         this.enemyShooterProjectiles.forEach(projectile => {
             projectile.x += projectile.vx;
             projectile.y += projectile.vy;
+            projectile.elapsedTime += this.game.clockTick;
+            
+            // Add particle effects for the trail
+            if (Math.random() < 0.4) { // Occasionally add particles for performance
+                const particleSize = 5 + Math.random() * 10;
+                const particleLife = 0.3 + Math.random() * 0.3;
+                const particleSpeed = 0.5 + Math.random() * 1;
+                
+                // Random offset from center
+                const offsetX = (Math.random() - 0.5) * 15;
+                const offsetY = (Math.random() - 0.5) * 15;
+                
+                // Calculate velocity opposite to projectile direction
+                const particleAngle = projectile.angle + Math.PI + (Math.random() - 0.5) * 0.5;
+                
+                projectile.particles.push({
+                    x: projectile.x + offsetX,
+                    y: projectile.y + offsetY,
+                    size: particleSize,
+                    life: particleLife,
+                    maxLife: particleLife,
+                    vx: Math.cos(particleAngle) * particleSpeed,
+                    vy: Math.sin(particleAngle) * particleSpeed,
+                    color: Math.random() < 0.5 ? projectile.colors.mid : projectile.colors.outer
+                });
+            }
+            
+            // Update particles
+            for (let i = projectile.particles.length - 1; i >= 0; i--) {
+                const particle = projectile.particles[i];
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life -= this.game.clockTick;
+                
+                if (particle.life <= 0) {
+                    projectile.particles.splice(i, 1);
+                }
+            }
         });
         // Remove projectiles that have gone off-screen
         this.enemyShooterProjectiles = this.enemyShooterProjectiles.filter(projectile => {
@@ -1323,10 +1369,51 @@ class BaseBackground {
     
         // --- NEW: Draw enemy shooter projectiles ---
         this.enemyShooterProjectiles.forEach(projectile => {
-            ctx.fillStyle = 'black';
+            // First draw the particles (trail)
+            projectile.particles.forEach(particle => {
+                const opacity = particle.life / particle.maxLife;
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            ctx.globalAlpha = 1.0;
+            
+            // Draw the fireball with gradient
+            const gradient = ctx.createRadialGradient(
+                projectile.x, projectile.y, 0,
+                projectile.x, projectile.y, projectile.radius
+            );
+            
+            gradient.addColorStop(0, 'white'); // Hot center
+            gradient.addColorStop(0.3, projectile.colors.core); // Core
+            gradient.addColorStop(0.7, projectile.colors.mid); // Mid layer
+            gradient.addColorStop(1, projectile.colors.outer); // Outer layer
+            
+            ctx.fillStyle = gradient;
             ctx.beginPath();
             ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Add glow effect
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = projectile.colors.outer;
+            ctx.beginPath();
+            ctx.arc(projectile.x, projectile.y, projectile.radius * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Add pulsing effect based on elapsed time
+            const pulseSize = projectile.radius * (1 + 0.2 * Math.sin(projectile.elapsedTime * 10));
+            ctx.globalAlpha = 0.15;
+            ctx.fillStyle = 'rgba(255, 255, 150, 0.5)';
+            ctx.beginPath();
+            ctx.arc(projectile.x, projectile.y, pulseSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Reset global alpha
+            ctx.globalAlpha = 1.0;
         });
         // -----------------------------------------------------
     
