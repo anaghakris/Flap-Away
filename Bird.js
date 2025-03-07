@@ -86,9 +86,15 @@ class Bird {
             radius: 6,
             life: 2,
             targetId: null, 
-            color: 'yellow',
+            color: 'blue',
             trail: [], 
-            angle: angle 
+            angle: angle,
+            rotation: 0,
+            rotationSpeed: 0.2,
+            particles: [],
+            hue: Math.random() * 60 + 180, // Random color in blue-cyan range
+            pulseTimer: 0,
+            pulseSpeed: 0.15
         };
         
         this.projectiles.push(projectile);
@@ -153,8 +159,6 @@ class Bird {
         
         return closestPlant;
     }
-
-
 
     reset() {
         this.x = 200;
@@ -331,7 +335,45 @@ class Bird {
             if (!proj.trail) proj.trail = [];
             
             if (this.game.clockTick % 0.05 < 0.01) {
-                proj.trail.push({x: proj.x, y: proj.y, radius: proj.radius * 0.8, life: 0.3});
+                proj.trail.push({
+                    x: proj.x, 
+                    y: proj.y, 
+                    radius: proj.radius * 0.8, 
+                    life: 0.4,
+                    hue: proj.hue
+                });
+                
+                // Add particles for sparkle effect
+                if (Math.random() > 0.5) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = Math.random() * proj.radius * 1.5;
+                    
+                    proj.particles.push({
+                        x: proj.x + Math.cos(angle) * distance,
+                        y: proj.y + Math.sin(angle) * distance,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        radius: Math.random() * 2 + 1,
+                        life: Math.random() * 0.3 + 0.1,
+                        hue: proj.hue + Math.random() * 40 - 20
+                    });
+                }
+            }
+            
+            // Update projectile effects
+            proj.rotation += proj.rotationSpeed;
+            proj.pulseTimer += this.game.clockTick * proj.pulseSpeed;
+            
+            // Update particles
+            for (let i = proj.particles.length - 1; i >= 0; i--) {
+                const particle = proj.particles[i];
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life -= this.game.clockTick;
+                
+                if (particle.life <= 0) {
+                    proj.particles.splice(i, 1);
+                }
             }
             
             if (proj.trail.length > 10) {
@@ -429,10 +471,18 @@ class Bird {
                 proj.trail.forEach(trail => {
                     ctx.beginPath();
                     ctx.arc(trail.x, trail.y, trail.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(255, 255, 0, ${trail.life})`;
+                    ctx.fillStyle = `hsla(${trail.hue}, 100%, 70%, ${trail.life})`;
                     ctx.fill();
                 });
             }
+            
+            // Draw particles
+            proj.particles.forEach(particle => {
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${particle.hue}, 100%, 75%, ${particle.life * 3})`;
+                ctx.fill();
+            });
         });
         
         for (let proj of this.projectiles) {
@@ -440,40 +490,73 @@ class Bird {
             ctx.translate(proj.x, proj.y);
             ctx.rotate(proj.angle);
             
+            // Draw energy trail
             const gradientTrail = ctx.createLinearGradient(-20, 0, 0, 0);
-            gradientTrail.addColorStop(0, 'rgba(255, 50, 0, 0)');
-            gradientTrail.addColorStop(0.5, 'rgba(255, 150, 0, 0.4)');
-            gradientTrail.addColorStop(1, 'rgba(255, 255, 0, 0.7)');
+            gradientTrail.addColorStop(0, `hsla(${proj.hue - 30}, 100%, 50%, 0)`);
+            gradientTrail.addColorStop(0.5, `hsla(${proj.hue - 15}, 100%, 60%, 0.4)`);
+            gradientTrail.addColorStop(1, `hsla(${proj.hue}, 100%, 70%, 0.7)`);
             
             ctx.beginPath();
             ctx.moveTo(0, 0);
-            ctx.lineTo(-20, proj.radius * 1.2);
+            ctx.lineTo(-20, proj.radius * 1.5);
             ctx.lineTo(-10, 0);
-            ctx.lineTo(-20, -proj.radius * 1.2);
+            ctx.lineTo(-20, -proj.radius * 1.5);
             ctx.closePath();
             
             ctx.fillStyle = gradientTrail;
             ctx.fill();
+            
             ctx.restore();
             
+            // Draw pulsing core
+            const pulseScale = 1 + Math.sin(proj.pulseTimer * Math.PI * 2) * 0.15;
+            
+            // Draw outer glow
             ctx.beginPath();
-            ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
+            ctx.arc(proj.x, proj.y, proj.radius * 2.5 * pulseScale, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${proj.hue}, 100%, 70%, 0.15)`;
+            ctx.fill();
+            
+            // Draw mid glow
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.radius * 1.8 * pulseScale, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${proj.hue}, 100%, 70%, 0.3)`;
+            ctx.fill();
+            
+            // Draw inner core
+            ctx.beginPath();
+            ctx.arc(proj.x, proj.y, proj.radius * pulseScale, 0, Math.PI * 2);
             
             const gradient = ctx.createRadialGradient(
                 proj.x, proj.y, 0,
-                proj.x, proj.y, proj.radius
+                proj.x, proj.y, proj.radius * pulseScale
             );
             gradient.addColorStop(0, 'white');
-            gradient.addColorStop(0.7, 'yellow');
-            gradient.addColorStop(1, 'orange');
+            gradient.addColorStop(0.4, `hsl(${proj.hue}, 100%, 80%)`);
+            gradient.addColorStop(0.7, `hsl(${proj.hue}, 100%, 60%)`);
+            gradient.addColorStop(1, `hsl(${proj.hue}, 100%, 40%)`);
             
             ctx.fillStyle = gradient;
             ctx.fill();
             
-            ctx.beginPath();
-            ctx.arc(proj.x, proj.y, proj.radius * 1.5, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
-            ctx.fill();
+            // Energy circling elements
+            ctx.save();
+            ctx.translate(proj.x, proj.y);
+            ctx.rotate(proj.rotation);
+            
+            // Draw energy rings
+            for (let i = 0; i < 3; i++) {
+                const angle = (i * Math.PI * 2 / 3) + proj.rotation * 1.5;
+                const distX = Math.cos(angle) * proj.radius * 1.3;
+                const distY = Math.sin(angle) * proj.radius * 1.3;
+                
+                ctx.beginPath();
+                ctx.arc(distX, distY, proj.radius * 0.4, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${proj.hue + 30}, 100%, 85%, 0.8)`;
+                ctx.fill();
+            }
+            
+            ctx.restore();
         }
         
         if (this.muzzleFlashes) {

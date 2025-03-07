@@ -1515,9 +1515,17 @@ class BaseBackground {
                     explosion.x, explosion.y, explosion.light.radius
                 );
                 
-                gradient.addColorStop(0, `rgba(255, 220, 50, ${explosion.light.intensity * 0.8})`);
-                gradient.addColorStop(0.5, `rgba(255, 100, 20, ${explosion.light.intensity * 0.4})`);
-                gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                if (explosion.light.isElectric) {
+                    // Electric light gradient
+                    gradient.addColorStop(0, `rgba(100, 220, 255, ${explosion.light.intensity * 0.8})`);
+                    gradient.addColorStop(0.5, `rgba(0, 180, 255, ${explosion.light.intensity * 0.4})`);
+                    gradient.addColorStop(1, 'rgba(0, 50, 255, 0)');
+                } else {
+                    // Regular explosion light gradient
+                    gradient.addColorStop(0, `rgba(255, 220, 50, ${explosion.light.intensity * 0.8})`);
+                    gradient.addColorStop(0.5, `rgba(255, 100, 20, ${explosion.light.intensity *.4})`);
+                    gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                }
                 
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
@@ -1526,19 +1534,94 @@ class BaseBackground {
             }
             
             if (explosion.shockwave) {
-                ctx.strokeStyle = `rgba(255, 255, 255, ${explosion.shockwave.life / explosion.shockwave.maxLife * 0.5})`;
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(explosion.shockwave.x, explosion.shockwave.y, explosion.shockwave.radius, 0, Math.PI * 2);
-                ctx.stroke();
+                if (explosion.shockwave.isElectric) {
+                    // Electric shockwave with zigzag pattern
+                    ctx.strokeStyle = `rgba(0, 200, 255, ${explosion.shockwave.life / explosion.shockwave.maxLife * 0.7})`;
+                    ctx.lineWidth = 3;
+                    
+                    // Draw zigzag pattern around the circle
+                    const segments = 18;
+                    const radiusVar = explosion.shockwave.radius * 0.1;
+                    
+                    ctx.beginPath();
+                    for (let i = 0; i <= segments; i++) {
+                        const angle = (i / segments) * Math.PI * 2;
+                        const radiusOffset = ((i % 2) * 2 - 1) * radiusVar;
+                        const radius = explosion.shockwave.radius + radiusOffset;
+                        
+                        const x = explosion.shockwave.x + Math.cos(angle) * radius;
+                        const y = explosion.shockwave.y + Math.sin(angle) * radius;
+                        
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                    
+                    // Add a few lightning bolts
+                    const numBolts = 5;
+                    for (let i = 0; i < numBolts; i++) {
+                        const angle = (i / numBolts) * Math.PI * 2;
+                        const boltLength = explosion.shockwave.radius * 1.3;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(explosion.shockwave.x, explosion.shockwave.y);
+                        
+                        let x = explosion.shockwave.x;
+                        let y = explosion.shockwave.y;
+                        
+                        // Draw a zigzag line
+                        const zigzags = 4;
+                        for (let j = 1; j <= zigzags; j++) {
+                            const segmentLength = (j / zigzags) * boltLength;
+                            const jitter = 10 * (j / zigzags);
+                            
+                            // Random zigzag
+                            x = explosion.shockwave.x + Math.cos(angle) * segmentLength + 
+                                (Math.random() - 0.5) * jitter * 2;
+                            y = explosion.shockwave.y + Math.sin(angle) * segmentLength + 
+                                (Math.random() - 0.5) * jitter * 2;
+                            
+                            ctx.lineTo(x, y);
+                        }
+                        
+                        ctx.stroke();
+                    }
+                } else {
+                    // Regular explosion shockwave
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${explosion.shockwave.life / explosion.shockwave.maxLife * 0.5})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(explosion.shockwave.x, explosion.shockwave.y, explosion.shockwave.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
             }
             
             explosion.particles.forEach(particle => {
                 ctx.fillStyle = particle.color;
                 ctx.globalAlpha = particle.life / particle.maxLife;
-                ctx.beginPath();
-                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                ctx.fill();
+                
+                if (particle.isElectric) {
+                    // Render electric particles as small lightning shapes
+                    const size = particle.size;
+                    
+                    // Draw a simple lightning bolt shape
+                    ctx.beginPath();
+                    ctx.moveTo(particle.x - size, particle.y);
+                    ctx.lineTo(particle.x - size/2, particle.y - size/2);
+                    ctx.lineTo(particle.x + size/3, particle.y);
+                    ctx.lineTo(particle.x, particle.y + size/2);
+                    ctx.lineTo(particle.x + size, particle.y - size/4);
+                    ctx.fill();
+                } else {
+                    // Regular circular particles
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             });
             
             ctx.globalAlpha = 1;
@@ -1982,6 +2065,113 @@ class BaseBackground {
         
         // Repel enemy projectiles
         this.repelEnemyProjectiles();
+        
+        // Check for plants in shockwave radius and destroy them
+        if (this.level === 3) {
+            this.checkShockwavePlantCollisions();
+        }
+    }
+    
+    // New method to check collisions between shockwave and plants
+    checkShockwavePlantCollisions() {
+        if (!this.shockwaveActive) return;
+        
+        for (let i = 0; i < this.snappingPlants.length; i++) {
+            const plant = this.snappingPlants[i];
+            if (plant.isDead) continue;
+            
+            const plantWidth = this.snappingPlantFrameWidth * this.snappingPlantScale;
+            const plantHeight = plant.type === "top" 
+                ? this.snappingPlantTopFrameHeight * this.snappingPlantScale
+                : this.snappingPlantFrameHeight * this.snappingPlantScale;
+            
+            // Get plant center
+            const plantCenterX = plant.x + plantWidth / 2;
+            const plantCenterY = plant.y + plantHeight / 2;
+            
+            // Calculate distance from plant center to shockwave center
+            const dx = plantCenterX - this.shockwave.x;
+            const dy = plantCenterY - this.shockwave.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Check if plant is within shockwave radius
+            if (distance < this.shockwave.radius) {
+                plant.isDead = true;
+                plant.deadTimer = 2;
+                
+                // Create electric explosion effect instead of regular explosion
+                this.createElectricPlantExplosion(
+                    plantCenterX,
+                    plantCenterY
+                );
+                
+                if (this.plantDeathSound) {
+                    const deathSound = this.plantDeathSound.cloneNode();
+                    deathSound.volume = 0.4;
+                    deathSound.play().catch(e => console.log("Audio play failed:", e));
+                }
+            }
+        }
+    }
+    
+    // New method to create an electric explosion effect for plants in level 3
+    createElectricPlantExplosion(x, y) {
+        const particleCount = 40 + Math.floor(Math.random() * 30);
+        const particles = [];
+        
+        // Electric colors
+        const electricColors = [
+            '#00FFFF', // Cyan
+            '#FFFFFF', // White
+            '#80DFFF', // Light blue
+            '#4040FF', // Blue
+            '#0080FF'  // Medium blue
+        ];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 2 + Math.random() * 6; // Faster particles
+            const size = 2 + Math.random() * 6;
+            const life = 0.5 + Math.random() * 1.5; // Longer life
+            
+            // Randomly select a color from the electric colors array
+            const color = electricColors[Math.floor(Math.random() * electricColors.length)];
+            
+            particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: size,
+                life: life,
+                maxLife: life,
+                color: color,
+                isElectric: true // Mark as electric particle for special rendering
+            });
+        }
+        
+        const shockwave = {
+            x: x,
+            y: y,
+            radius: 5,
+            maxRadius: 80, // Larger radius
+            life: 0.7,
+            maxLife: 0.7,
+            isElectric: true
+        };
+        
+        this.plantExplosions.push({
+            particles: particles,
+            shockwave: shockwave,
+            x: x,
+            y: y,
+            light: {
+                radius: 100, // Larger light radius
+                intensity: 1.2, // More intense
+                life: 0.7,
+                isElectric: true
+            }
+        });
     }
     
     repelEnemyProjectiles() {
