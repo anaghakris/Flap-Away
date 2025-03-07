@@ -578,6 +578,24 @@ class BaseBackground {
                 if (this.level === 3) {
                     this.gameCompleted = true;
                     this.gameCompletedMessageTime = this.GAME_COMPLETED_DURATION;
+                    
+                    // Deactivate powerups before showing victory message
+                    const bird = this.getBird();
+                    if (bird) {
+                        // Deactivate invincibility
+                        bird.invincible = false;
+                        bird.invincibleTimer = 0;
+                        bird.powerUpAnimation.active = false;
+                        if (bird.powerSoundLoop) {
+                            bird.powerSoundLoop.pause();
+                            bird.powerSoundLoop = null;
+                        }
+                    }
+                    
+                    // Deactivate shockwave
+                    this.shockwaveActive = false;
+                    this.shockwave.life = 0;
+                    
                     this.enemyShooters = [];
                     this.enemyShooterProjectiles = [];
                     this.snappingPlants = [];
@@ -690,6 +708,18 @@ class BaseBackground {
     
         const bird = this.getBird();
         if (this.gameCompleted) {
+            // Make sure the bird is controlled/paused when game is completed
+            if (bird) {
+                // Ensure invincibility and shockwave are deactivated
+                bird.invincible = false;
+                bird.invincibleTimer = 0;
+                if (bird.powerSoundLoop) {
+                    bird.powerSoundLoop.pause();
+                    bird.powerSoundLoop = null;
+                }
+                this.shockwaveActive = false;
+            }
+            
             if (this.gameCompletedMessageTime > 0) {
                 this.gameCompletedMessageTime -= this.game.clockTick;
                 if (this.gameCompletedMessageTime <= 0) {

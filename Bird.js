@@ -217,13 +217,13 @@ class Bird {
     update() {
         if (this.game.gameCompleted) {
             this.velocity = 0;
-            this.y += Math.sin(Date.now() / 200) * 0.5;
+            // Remove the hovering motion to completely pause the bird
+            // this.y += Math.sin(Date.now() / 200) * 0.5;
             this.rotation = 0; // Keep the bird level
             this.isFlapping = true; // Keep the flapping animation
     
-            if (this.invincible) {
-                this.invincibleEffects.rainbowHue = (this.invincibleEffects.rainbowHue + 2) % 360;
-            }
+            // Make sure invincibility is turned off
+            this.invincible = false;
             
             this.updateProjectiles();
             return;
