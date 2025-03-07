@@ -1628,34 +1628,116 @@ class BaseBackground {
 
         // Draw shockwave effect (in level 3)
         if (this.level === 3 && this.shockwaveActive) {
-            // Draw outer expanding ring
+            // Electric arc colors
+            const electricColors = ['#00FFFF', '#FFFFFF', '#80DFFF', '#4040FF', '#0080FF'];
+            
+            // Draw electric field boundary (outer circle)
             ctx.beginPath();
             ctx.arc(this.shockwave.x, this.shockwave.y, this.shockwave.radius, 0, Math.PI * 2);
-            ctx.strokeStyle = this.shockwave.color;
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            // Draw pulsing inner ring
-            ctx.beginPath();
-            ctx.arc(this.shockwave.x, this.shockwave.y, this.shockwave.pulseRadius, 0, Math.PI * 2);
-            ctx.strokeStyle = this.shockwave.pulseColor;
+            ctx.strokeStyle = '#80DFFF';
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // Draw glow effect
-            const gradient = ctx.createRadialGradient(
+            // Draw lightning bolts emanating from center
+            const numBolts = 12;
+            const boltSegments = 6;
+            const totalTime = Date.now() / 200; // Control the animation speed
+            
+            for (let i = 0; i < numBolts; i++) {
+                const angle = (i / numBolts) * Math.PI * 2 + totalTime * 0.2;
+                const boltLength = this.shockwave.radius * 0.9;
+                
+                // Start from center
+                let startX = this.shockwave.x;
+                let startY = this.shockwave.y;
+                
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                
+                // Draw jagged lightning path
+                for (let j = 1; j <= boltSegments; j++) {
+                    const segmentLength = (j / boltSegments) * boltLength;
+                    const jitter = 20 * (j / boltSegments);
+                    
+                    // Calculate position with random jitter for jagged effect
+                    const endX = this.shockwave.x + Math.cos(angle) * segmentLength + 
+                                 (Math.random() - 0.5) * jitter;
+                    const endY = this.shockwave.y + Math.sin(angle) * segmentLength + 
+                                 (Math.random() - 0.5) * jitter;
+                    
+                    ctx.lineTo(endX, endY);
+                    startX = endX;
+                    startY = endY;
+                }
+                
+                // Draw electric path
+                ctx.strokeStyle = electricColors[i % electricColors.length];
+                ctx.lineWidth = 2 + Math.random() * 2;
+                ctx.globalAlpha = 0.7 + Math.random() * 0.3;
+                ctx.stroke();
+            }
+            
+            // Draw electric pulses around the boundary
+            const pulseCount = 18;
+            for (let i = 0; i < pulseCount; i++) {
+                const pulseAngle = (i / pulseCount) * Math.PI * 2 + totalTime;
+                const pulseDistance = this.shockwave.radius;
+                const pulseX = this.shockwave.x + Math.cos(pulseAngle) * pulseDistance;
+                const pulseY = this.shockwave.y + Math.sin(pulseAngle) * pulseDistance;
+                
+                // Electric pulse
+                const pulseSize = 4 + Math.sin(totalTime * 3 + i) * 3;
+                
+                // Change color based on position to create rainbow effect
+                const colorIndex = (i + Math.floor(totalTime)) % electricColors.length;
+                
+                ctx.beginPath();
+                ctx.arc(pulseX, pulseY, pulseSize, 0, Math.PI * 2);
+                ctx.fillStyle = electricColors[colorIndex];
+                ctx.fill();
+                
+                // Add small connecting arcs around the perimeter
+                if (i < pulseCount - 1) {
+                    const nextAngle = ((i + 1) / pulseCount) * Math.PI * 2 + totalTime;
+                    const nextX = this.shockwave.x + Math.cos(nextAngle) * pulseDistance;
+                    const nextY = this.shockwave.y + Math.sin(nextAngle) * pulseDistance;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(pulseX, pulseY);
+                    
+                    // Arc with jitter
+                    const midAngle = (pulseAngle + nextAngle) / 2;
+                    const midDistance = pulseDistance * (0.9 + Math.random() * 0.2);
+                    const midX = this.shockwave.x + Math.cos(midAngle) * midDistance;
+                    const midY = this.shockwave.y + Math.sin(midAngle) * midDistance;
+                    
+                    ctx.quadraticCurveTo(midX, midY, nextX, nextY);
+                    
+                    ctx.strokeStyle = electricColors[(colorIndex + 1) % electricColors.length];
+                    ctx.lineWidth = 1;
+                    ctx.globalAlpha = 0.5;
+                    ctx.stroke();
+                }
+            }
+            
+            // Draw center electric core
+            const coreGradient = ctx.createRadialGradient(
                 this.shockwave.x, this.shockwave.y, 0,
-                this.shockwave.x, this.shockwave.y, this.shockwave.pulseRadius * 1.5
+                this.shockwave.x, this.shockwave.y, this.shockwave.pulseRadius
             );
             
-            gradient.addColorStop(0, 'rgba(150, 220, 255, 0.4)');
-            gradient.addColorStop(0.5, 'rgba(100, 200, 255, 0.2)');
-            gradient.addColorStop(1, 'rgba(50, 150, 255, 0)');
+            coreGradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+            coreGradient.addColorStop(0.4, 'rgba(100, 200, 255, 0.7)');
+            coreGradient.addColorStop(1, 'rgba(0, 120, 255, 0)');
             
-            ctx.fillStyle = gradient;
+            ctx.fillStyle = coreGradient;
+            ctx.globalAlpha = 0.7 + Math.sin(totalTime * 5) * 0.3; // Pulsing effect
             ctx.beginPath();
-            ctx.arc(this.shockwave.x, this.shockwave.y, this.shockwave.pulseRadius * 1.5, 0, Math.PI * 2);
+            ctx.arc(this.shockwave.x, this.shockwave.y, this.shockwave.pulseRadius, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Reset alpha
+            ctx.globalAlpha = 1.0;
             
             // Draw timer display
             const timeRemaining = Math.ceil(this.shockwave.life);
@@ -1672,10 +1754,28 @@ class BaseBackground {
                 ctx.roundRect(timerX - 20, timerY - 15, 40, 30, 8);
                 ctx.fill();
                 
-                // Draw border
-                ctx.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+                // Draw electric border
+                ctx.strokeStyle = '#00FFFF';
                 ctx.lineWidth = 2;
                 ctx.stroke();
+                
+                // Add small electric accents
+                for (let i = 0; i < 4; i++) {
+                    const cornerX = timerX + (i % 2 === 0 ? -20 : 20);
+                    const cornerY = timerY + (i < 2 ? -15 : 15);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(cornerX, cornerY);
+                    const sparkLength = 5 + Math.random() * 5;
+                    const sparkAngle = (i * Math.PI / 2) + (Math.random() - 0.5) * 0.5;
+                    ctx.lineTo(
+                        cornerX + Math.cos(sparkAngle) * sparkLength,
+                        cornerY + Math.sin(sparkAngle) * sparkLength
+                    );
+                    ctx.strokeStyle = electricColors[Math.floor(Math.random() * electricColors.length)];
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
                 
                 // Draw timer text
                 ctx.font = 'bold 18px Arial';
@@ -1684,9 +1784,16 @@ class BaseBackground {
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillText(timeRemaining.toString(), timerX, timerY);
                 
-                // Draw "SHOCK" text above timer
+                // Draw "SHOCK" text above timer with electric effect
                 ctx.font = 'bold 12px Arial';
+                ctx.fillStyle = '#00FFFF';
                 ctx.fillText("SHOCK", timerX, timerY - 20);
+                
+                // Add glow effect to text
+                ctx.shadowColor = '#00FFFF';
+                ctx.shadowBlur = 5 + Math.sin(totalTime * 10) * 3;
+                ctx.fillText("SHOCK", timerX, timerY - 20);
+                ctx.shadowBlur = 0;
             }
         }
     }
