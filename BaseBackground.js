@@ -814,6 +814,13 @@ class BaseBackground {
         if (this.gameCompleted) {
             // Make sure the bird is controlled/paused when game is completed
             if (bird) {
+
+                // Bird movement stops
+                bird.velocity = 0;
+                bird.rotation = 0;
+                bird.gameStarted = false;
+                bird.isFlapping = true;
+
                 // Ensure invincibility and shockwave are deactivated
                 bird.invincible = false;
                 bird.invincibleTimer = 0;
