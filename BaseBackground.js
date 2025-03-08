@@ -115,6 +115,13 @@ class BaseBackground {
         this.MIN_SOUND_INTERVAL = 150;
         this.dieSound = ASSET_MANAGER.getAsset("./audio/sfx_die.wav");
         this.dieSound.volume = 0.6;
+        
+        // Sound for dragon fireballs
+        this.fireWhooshSound = ASSET_MANAGER.getAsset("./audio/sfx_swooshing.wav");
+        // Using swoosh sound for fire if no dedicated fire sound is available
+        if (this.fireWhooshSound) {
+            this.fireWhooshSound.volume = 0.35;
+        }
     } 
 
     initializeProperties() {
@@ -2253,51 +2260,141 @@ class BaseBackground {
             
             // Draw dragon fireballs
             this.dragonFireballs.forEach(fireball => {
-                // Draw the particles (trail)
+                // Save context for transformations
+                ctx.save();
+                
+                // Draw particles first (behind the fireball)
                 fireball.particles.forEach(particle => {
+                    ctx.save();
                     const opacity = particle.life / particle.maxLife;
                     ctx.globalAlpha = opacity;
-                    ctx.fillStyle = particle.color;
+                    
+                    if (particle.type === 'smoke') {
+                        // Draw smoke with gradient
+                        const smokeGradient = ctx.createRadialGradient(
+                            particle.x, particle.y, 0,
+                            particle.x, particle.y, particle.size
+                        );
+                        smokeGradient.addColorStop(0, 'rgba(150, 150, 150, 0.6)');
+                        smokeGradient.addColorStop(1, 'rgba(80, 80, 80, 0)');
+                        ctx.fillStyle = smokeGradient;
+                    } else if (particle.type === 'ember') {
+                        // Draw embers with glow
+                        ctx.shadowBlur = 5;
+                        ctx.shadowColor = 'rgba(255, 100, 20, 0.8)';
+                        ctx.fillStyle = particle.color;
+                    } else {
+                        // Draw flame particles
+                        ctx.fillStyle = particle.color;
+                    }
+                    
+                    // Draw the particle (circle for most, special shape for flames)
                     ctx.beginPath();
-                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    if (particle.type === 'flame' && Math.random() < 0.5) {
+                        // Draw flame-like shape
+                        ctx.translate(particle.x, particle.y);
+                        ctx.rotate(particle.rotation);
+                        
+                        const flameHeight = particle.size * 1.5;
+                        ctx.moveTo(0, -flameHeight/2);
+                        ctx.quadraticCurveTo(flameHeight/3, -flameHeight/6, 0, flameHeight/2);
+                        ctx.quadraticCurveTo(-flameHeight/3, -flameHeight/6, 0, -flameHeight/2);
+                    } else {
+                        // Regular circle
+                        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    }
+                    
+                    ctx.fill();
+                    
+                    // Reset shadow
+                    if (particle.type === 'ember') {
+                        ctx.shadowBlur = 0;
+                    }
+                    
+                    ctx.restore();
+                });
+                
+                // Center everything on the fireball center
+                ctx.translate(fireball.x, fireball.y);
+                
+                // Apply the current size variation
+                const currentRadius = fireball.originalRadius * fireball.sizeVariation;
+                
+                // First, draw flames extending from the main fireball
+                fireball.flames.forEach(flame => {
+                    // Create a cone/flame shape radiating from center
+                    const flameLength = flame.currentLength;
+                    
+                    // Create gradient for this specific flame
+                    const flameGradient = ctx.createLinearGradient(
+                        0, 0,
+                        Math.cos(flame.angle) * flameLength, 
+                        Math.sin(flame.angle) * flameLength
+                    );
+                    
+                    // Gradient stops for flame
+                    flameGradient.addColorStop(0, fireball.colors.core);
+                    flameGradient.addColorStop(0.2, fireball.colors.innerFlame);
+                    flameGradient.addColorStop(0.6, fireball.colors.midFlame);
+                    flameGradient.addColorStop(1, 'rgba(255, 0, 0, 0)'); // Fade to transparent
+                    
+                    ctx.fillStyle = flameGradient;
+                    
+                    // Draw flame shape as a quadratic curve
+                    ctx.beginPath();
+                    
+                    const tipX = Math.cos(flame.angle) * flameLength;
+                    const tipY = Math.sin(flame.angle) * flameLength;
+                    
+                    const perpAngle = flame.angle + Math.PI/2;
+                    const controlWidth = flame.width * (0.7 + Math.random() * 0.6); // Fluctuating width
+                    
+                    const ctrlX1 = Math.cos(perpAngle) * controlWidth/2;
+                    const ctrlY1 = Math.sin(perpAngle) * controlWidth/2;
+                    
+                    const ctrlX2 = -ctrlX1;
+                    const ctrlY2 = -ctrlY1;
+                    
+                    // Draw the flame shape
+                    ctx.moveTo(ctrlX1, ctrlY1);
+                    ctx.quadraticCurveTo(tipX/2, tipY/2, tipX, tipY);
+                    ctx.quadraticCurveTo(tipX/2, tipY/2, ctrlX2, ctrlY2);
+                    ctx.closePath();
+                    
                     ctx.fill();
                 });
                 
+                // Now draw the main fireball in the center
                 ctx.globalAlpha = 1.0;
                 
-                // Draw the fireball with gradient
+                // Draw the main fireball with enhanced gradient
                 const gradient = ctx.createRadialGradient(
-                    fireball.x, fireball.y, 0,
-                    fireball.x, fireball.y, fireball.radius
+                    0, 0, 0,
+                    0, 0, currentRadius
                 );
                 
-                gradient.addColorStop(0, 'white'); // Hot center
-                gradient.addColorStop(0.2, fireball.colors.core); // Core
-                gradient.addColorStop(0.6, fireball.colors.mid); // Mid layer
-                gradient.addColorStop(1, fireball.colors.outer); // Outer layer
+                gradient.addColorStop(0, fireball.colors.core); // White hot center
+                gradient.addColorStop(0.2, fireball.colors.innerFlame); // Yellow
+                gradient.addColorStop(0.6, fireball.colors.midFlame); // Orange
+                gradient.addColorStop(1, 'rgba(255, 40, 0, 0.1)'); // Fading red
                 
                 ctx.fillStyle = gradient;
                 ctx.beginPath();
-                ctx.arc(fireball.x, fireball.y, fireball.radius, 0, Math.PI * 2);
+                ctx.arc(0, 0, currentRadius, 0, Math.PI * 2);
                 ctx.fill();
                 
                 // Add glow effect
                 ctx.globalAlpha = 0.4;
-                ctx.fillStyle = fireball.colors.outer;
+                ctx.shadowBlur = 30;
+                ctx.shadowColor = fireball.colors.outerFlame;
                 ctx.beginPath();
-                ctx.arc(fireball.x, fireball.y, fireball.radius * 1.8, 0, Math.PI * 2);
+                ctx.arc(0, 0, currentRadius * 1.2, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Add pulsing effect
-                const pulseSize = fireball.radius * (1 + 0.25 * Math.sin(fireball.elapsedTime * 12));
-                ctx.globalAlpha = 0.2;
-                ctx.fillStyle = 'rgba(255, 220, 150, 0.6)';
-                ctx.beginPath();
-                ctx.arc(fireball.x, fireball.y, pulseSize, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Reset global alpha
+                // Reset shadow
+                ctx.shadowBlur = 0;
                 ctx.globalAlpha = 1.0;
+                ctx.restore();
             });
         }
         // ---------------------------------------
@@ -2933,24 +3030,63 @@ class BaseBackground {
         const vx = (dx / distance) * speed;
         const vy = (dy / distance) * speed;
         
-        // Create the fireball
+        // Create the fireball with enhanced properties for fire effect
         const fireball = {
             x: dragonMouthX,
             y: dragonMouthY,
             vx: vx * this.game.clockTick,
             vy: vy * this.game.clockTick,
-            radius: 25, // Larger radius for dragon fireballs
+            radius: 25, // Base radius for dragon fireballs
             angle: Math.atan2(vy, vx),
             elapsedTime: 0,
+            flickerTime: 0,
+            flickerRate: 0.05 + Math.random() * 0.05, // Random flicker rate for each fireball
             particles: [],
+            flames: [], // New array to hold flame shapes
             colors: {
-                core: '#FF3300', // Bright red
-                mid: '#FF9900', // Orange
-                outer: '#FFCC00'  // Yellow-gold
-            }
+                core: '#FFFFFF', // White hot center
+                innerFlame: '#FFDD00', // Yellow inner flame
+                midFlame: '#FF6600', // Orange mid flame
+                outerFlame: '#FF3300',  // Red outer flame
+                ember: '#FF2200', // Ember color
+                smoke: 'rgba(80, 80, 80, 0.5)' // Smoke color
+            },
+            // Store original size to allow for pulsing
+            originalRadius: 25,
+            pulseAmount: 0.2,
+            // Size variation for more organic look
+            sizeVariation: 1.0
         };
         
+        // Initialize flame particles
+        this.initializeFlameShapes(fireball);
+        
         this.dragonFireballs.push(fireball);
+        
+        // Play a fire whoosh sound if available
+        if (this.fireWhooshSound) {
+            const sound = this.fireWhooshSound.cloneNode();
+            sound.volume = 0.3;
+            sound.play();
+        }
+    }
+    
+    // NEW: Method to initialize flame shapes for the fireball
+    initializeFlameShapes(fireball) {
+        const flameCount = 8 + Math.floor(Math.random() * 4); // 8-11 flames
+        
+        for (let i = 0; i < flameCount; i++) {
+            const angle = (i / flameCount) * Math.PI * 2;
+            const length = fireball.radius * (0.8 + Math.random() * 0.6); // Varied lengths
+            
+            fireball.flames.push({
+                angle: angle,
+                baseLength: length,
+                currentLength: length,
+                width: 20 + Math.random() * 15,
+                speedMultiplier: 0.8 + Math.random() * 0.4
+            });
+        }
     }
     
     // --- NEW: Method to update dragon fireballs ---
@@ -2961,17 +3097,50 @@ class BaseBackground {
             fireball.y += fireball.vy;
             fireball.elapsedTime += this.game.clockTick;
             
-            // Add particle effects for the trail (similar to enemy projectiles)
-            if (Math.random() < 0.5) { // More particles for dragon fireballs
-                const particleSize = 8 + Math.random() * 12;
-                const particleLife = 0.4 + Math.random() * 0.4;
-                const particleSpeed = 0.6 + Math.random() * 1.2;
+            // Update flicker timing
+            fireball.flickerTime += this.game.clockTick;
+            if (fireball.flickerTime >= fireball.flickerRate) {
+                fireball.flickerTime = 0;
+                fireball.sizeVariation = 0.85 + Math.random() * 0.3; // 0.85 to 1.15 size variation
                 
-                // Random offset from center
-                const offsetX = (Math.random() - 0.5) * 20;
-                const offsetY = (Math.random() - 0.5) * 20;
+                // Also update flame shapes
+                fireball.flames.forEach(flame => {
+                    flame.currentLength = flame.baseLength * (0.8 + Math.random() * 0.4);
+                    flame.angle += (Math.random() - 0.5) * 0.2; // Small angle variations
+                });
+            }
+            
+            // Add particle effects for the trail (enhanced for fire look)
+            if (Math.random() < 0.7) { // More particles for dragon fireballs
+                // Decide if it's smoke, ember, or flame particle
+                const particleType = Math.random();
                 
-                // Calculate velocity opposite to fireball direction
+                let particleSize, particleLife, particleSpeed, particleColor;
+                
+                if (particleType < 0.6) { // 60% flame particles
+                    particleSize = 6 + Math.random() * 10;
+                    particleLife = 0.2 + Math.random() * 0.3;
+                    particleSpeed = 0.5 + Math.random() * 1.0;
+                    // Choose from flame colors
+                    const flameColors = [fireball.colors.innerFlame, fireball.colors.midFlame, fireball.colors.outerFlame];
+                    particleColor = flameColors[Math.floor(Math.random() * flameColors.length)];
+                } else if (particleType < 0.9) { // 30% ember particles
+                    particleSize = 2 + Math.random() * 4;
+                    particleLife = 0.4 + Math.random() * 0.6;
+                    particleSpeed = 0.8 + Math.random() * 1.5;
+                    particleColor = fireball.colors.ember;
+                } else { // 10% smoke particles
+                    particleSize = 10 + Math.random() * 15;
+                    particleLife = 0.6 + Math.random() * 0.7;
+                    particleSpeed = 0.3 + Math.random() * 0.6;
+                    particleColor = fireball.colors.smoke;
+                }
+                
+                // Random offset from center with more trailing particles
+                const offsetX = (Math.random() - 0.3) * fireball.radius; // More particles toward back of fireball
+                const offsetY = (Math.random() - 0.5) * fireball.radius;
+                
+                // Calculate velocity with some randomness but mainly opposite to fireball direction
                 const particleAngle = fireball.angle + Math.PI + (Math.random() - 0.5) * 0.8;
                 
                 fireball.particles.push({
@@ -2982,7 +3151,10 @@ class BaseBackground {
                     maxLife: particleLife,
                     vx: Math.cos(particleAngle) * particleSpeed,
                     vy: Math.sin(particleAngle) * particleSpeed,
-                    color: Math.random() < 0.5 ? fireball.colors.mid : fireball.colors.outer
+                    color: particleColor,
+                    rotation: Math.random() * Math.PI * 2, // For non-circular particles
+                    rotationSpeed: (Math.random() - 0.5) * 0.1, // For rotating particles
+                    type: particleType < 0.6 ? 'flame' : (particleType < 0.9 ? 'ember' : 'smoke')
                 });
             }
             
@@ -2992,6 +3164,16 @@ class BaseBackground {
                 particle.x += particle.vx;
                 particle.y += particle.vy;
                 particle.life -= this.game.clockTick;
+                
+                // Update rotation for certain particles
+                if (particle.rotation !== undefined) {
+                    particle.rotation += particle.rotationSpeed;
+                }
+                
+                // For smoke particles, grow slightly as they age
+                if (particle.type === 'smoke' && particle.life < particle.maxLife * 0.7) {
+                    particle.size += 0.2;
+                }
                 
                 if (particle.life <= 0) {
                     fireball.particles.splice(i, 1);
