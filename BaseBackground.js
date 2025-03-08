@@ -42,6 +42,7 @@ class BaseBackground {
         this.dragonLifetime = 15; // 10 seconds before completing the wave
         this.dragonFireballs = []; // Array to store dragon fireballs
         this.dragonFireballInterval = 1.0; // Shoot a fireball every 1 second
+        this.dragonCompletionTimer = null; // Store the setTimeout ID
         // -------------------------------------------
         
         this.setupSounds();
@@ -240,6 +241,7 @@ class BaseBackground {
         this.enemyShooterProjectiles = [];
         this.dragon = null; // Reset the dragon
         this.dragonFireballs = []; // Reset the dragon fireballs
+        this.plantExplosions = []; // Clear all explosion effects
 
         // Reset shockwave state
         this.shockwaveActive = false;
@@ -286,6 +288,12 @@ class BaseBackground {
         this.game.gameOver = false;
         this.gameCompleted = false;
         this.gameCompletedMessageTime = 0;
+
+        // Clear the dragon completion timer
+        if (this.dragonCompletionTimer) {
+            clearTimeout(this.dragonCompletionTimer);
+            this.dragonCompletionTimer = null;
+        }
     }
 
     startGame() {
@@ -633,8 +641,13 @@ class BaseBackground {
             // --- NEW: Spawn the Dragon for Level 3's finale ---
             this.spawnDragon();
             
+            // Clear any existing dragon completion timer
+            if (this.dragonCompletionTimer) {
+                clearTimeout(this.dragonCompletionTimer);
+            }
+            
             // Set a timeout to end the dragon encounter after its lifetime
-            setTimeout(() => {
+            this.dragonCompletionTimer = setTimeout(() => {
                 this.evilWaveActive = false;
                 this.gameCompleted = true;
                 this.gameCompletedMessageTime = this.GAME_COMPLETED_DURATION;
