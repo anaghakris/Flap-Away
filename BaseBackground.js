@@ -221,59 +221,58 @@ class BaseBackground {
     reset() {
         this.health = 3;
         this.coinsForHeart = 0;
-
+    
         this.chanceMessage = "";
         this.chanceMessageTimer = 0;
-
+    
         if (this.evilWaveTimeouts) {
             this.evilWaveTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
             this.evilWaveTimeouts = [];
         }
-
+    
         this.pipeArray = [];
         this.snappingPlants = [];
         this.coins = [];
         this.enemyBigBirds = [];
         this.coinsForHeart = 0;
-
+    
         this.mushrooms = [];
         this.enemyShooters = [];
         this.enemyShooterProjectiles = [];
-        this.dragon = null; // Reset the dragon
-        this.dragonFireballs = []; // Reset the dragon fireballs
-        this.plantExplosions = []; // Clear all explosion effects
-
-        // Reset shockwave state
+        this.dragon = null; 
+        this.dragonFireballs = []; 
+        this.plantExplosions = []; 
+    
         this.shockwaveActive = false;
         this.shockwave.life = 0;
         this.shockwave.radius = 0;
         this.shockwave.pulseRadius = 0;
-
+    
         this.gameStarted = false;
         this.hasCollided = false;
         this.pipePairCount = 0;
-
+    
         this.dangerDisplayTime = 0;
         this.DANGER_DURATION = 1.0;
         this.evilWaveActive = false;
         this.evilWaveTriggered = false;
         this.EVIL_WAVE_PIPE_COUNT = 17;
         this.evilWaveBirdsSpawned = 0;
-
+    
         if (this.pipeSpawnInterval) {
             clearInterval(this.pipeSpawnInterval);
         }
         if (this.evilWaveInterval) {
             clearInterval(this.evilWaveInterval);
         }
-
+    
         this.setupPipeSpawning();
         this.coinProgress.reset();
-
+    
         this.levelPassedMessageTime = 0;
         this.postEvilWaveDelayTimer = 0;
         this.flashTimer = 0;
-
+    
         if (this.level === 2) {
             let bird = this.getBird();
             if (bird) {
@@ -286,10 +285,10 @@ class BaseBackground {
             }
         }
         this.game.gameOver = false;
+        this.game.hasCollided = false; 
         this.gameCompleted = false;
         this.gameCompletedMessageTime = 0;
-
-        // Clear the dragon completion timer
+    
         if (this.dragonCompletionTimer) {
             clearTimeout(this.dragonCompletionTimer);
             this.dragonCompletionTimer = null;
@@ -589,7 +588,7 @@ class BaseBackground {
             this.evilWaveTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
             this.evilWaveTimeouts = [];
         }
-
+    
         this.evilWaveActive = true;
         this.evilWaveTriggered = true;
         this.pipeArray = [];
@@ -602,7 +601,7 @@ class BaseBackground {
             clearInterval(this.pipeSpawnInterval);
             this.pipeSpawnInterval = null;
         }
-
+    
         // Immediately deactivate powerups at start of dragon wave
         const bird = this.getBird();
         if (bird) {
@@ -619,7 +618,7 @@ class BaseBackground {
         // Deactivate shockwave
         this.shockwaveActive = false;
         this.shockwave.life = 0;
-
+    
         if (this.level === 1) {
             this.evilWaveBirdsSpawned = 0;
             this.spawnEnemyBigBird();
@@ -638,50 +637,45 @@ class BaseBackground {
             };
             spawnNextBird();
         } else if (this.level === 3) {
-            // --- NEW: Spawn the Dragon for Level 3's finale ---
             this.spawnDragon();
             
-            // Clear any existing dragon completion timer
             if (this.dragonCompletionTimer) {
                 clearTimeout(this.dragonCompletionTimer);
             }
             
-            // Set a timeout to end the dragon encounter after its lifetime
             this.dragonCompletionTimer = setTimeout(() => {
-                this.evilWaveActive = false;
-                this.gameCompleted = true;
-                this.gameCompletedMessageTime = this.GAME_COMPLETED_DURATION;
-                
-                // Deactivate powerups before showing victory message
-                const bird = this.getBird();
-                if (bird) {
-                    // Deactivate invincibility
-                    bird.invincible = false;
-                    bird.invincibleTimer = 0;
-                    bird.powerUpAnimation.active = false;
-                    if (bird.powerSoundLoop) {
-                        bird.powerSoundLoop.pause();
-                        bird.powerSoundLoop = null;
+                if (!this.game.gameOver) {
+                    this.evilWaveActive = false;
+                    this.gameCompleted = true;
+                    this.gameCompletedMessageTime = this.GAME_COMPLETED_DURATION;
+                    
+                    const bird = this.getBird();
+                    if (bird) {
+                        bird.invincible = false;
+                        bird.invincibleTimer = 0;
+                        bird.powerUpAnimation.active = false;
+                        if (bird.powerSoundLoop) {
+                            bird.powerSoundLoop.pause();
+                            bird.powerSoundLoop = null;
+                        }
                     }
+                    
+                    this.shockwaveActive = false;
+                    this.shockwave.life = 0;
+                    
+                    this.enemyShooters = [];
+                    this.enemyShooterProjectiles = [];
+                    this.snappingPlants = [];
+                    this.pipeArray = [];
+                    this.dragon = null;
+                    this.dragonFireballs = []; 
                 }
-                
-                // Deactivate shockwave
-                this.shockwaveActive = false;
-                this.shockwave.life = 0;
-                
-                this.enemyShooters = [];
-                this.enemyShooterProjectiles = [];
-                this.snappingPlants = [];
-                this.pipeArray = [];
-                this.dragon = null;
-                this.dragonFireballs = []; // Clear dragon fireballs
             }, this.dragonLifetime * 1000);
         } else {
             setTimeout(() => {
                 this.evilWaveActive = false;
                 
                 if (this.level === 3) {
-                    // This code is now handled in the level 3 specific block above
                 } else {
                     this.levelPassedMessageTime = this.levelPassedMessageDuration;
                     this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
@@ -694,7 +688,7 @@ class BaseBackground {
             }, 2000);
         }
     }
-
+    
     spawnEnemyBigBird() {
         const enemyWidth = this.BIRD_WIDTH * 3;
         const enemyHeight = this.BIRD_HEIGHT * 2;
@@ -786,7 +780,14 @@ class BaseBackground {
     }
 
     update() {
-        if (!this.gameStarted || this.game.gameOver) return;
+        if (!this.gameStarted || this.game.gameOver) {
+            if (this.game.gameOver && this.dragon) {
+                this.gameCompleted = false;
+                this.gameCompletedMessageTime = 0;
+            }
+            return;
+        }
+    
     
         const bird = this.getBird();
         
@@ -1561,11 +1562,10 @@ class BaseBackground {
                 this.chanceMessageTimer = this.CHANCE_MESSAGE_DURATION;
                 bird.invincible = true;
                 bird.invincibleTimer = 2; 
-
+    
                 this.coinsForHeart = 0;
             }
             
-            // Deactivate shockwave on collision
             if (this.level === 3 && this.shockwaveActive) {
                 this.shockwaveActive = false;
             }
@@ -1573,6 +1573,16 @@ class BaseBackground {
             if (this.health <= 0) {
                 this.game.gameOver = true;
                 this.game.hasCollided = true;
+                
+                if (this.dragon) {
+                    this.gameCompleted = false;
+                    this.gameCompletedMessageTime = 0;                    
+                    if (this.dragonCompletionTimer) {
+                        clearTimeout(this.dragonCompletionTimer);
+                        this.dragonCompletionTimer = null;
+                    }
+                }
+                
                 bird.velocity = 0;
                 bird.rotation = bird.maxRotationDown;
                 this.scoreManager.updateBestScore(bird.score);
