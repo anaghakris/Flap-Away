@@ -28,6 +28,22 @@ class BaseBackground {
         this.enemyShooterSpeed = 3; // speed at which it moves rightward
         this.enemyShooters = [];
         this.enemyShooterProjectiles = []; // NEW: Array to store shooter projectiles
+        
+        // --- NEW: Dragon Enemy for Level 3 ---
+        this.dragonSprite = ASSET_MANAGER.getAsset("./Sprites/Dragon/sprite_sheet.png");
+        this.dragonFrameCount = 4;
+        this.dragonWidth = 812;
+        this.dragonHeight = 675;
+        this.dragonScale = 0.2; // Adjust scale as needed
+        this.dragonFrameDuration = 0.2;
+        this.dragon = null;  // Will hold the dragon instance when spawned
+        this.dragonHoverSpeed = 1.5;
+        this.dragonHoverRange = 50;
+        this.dragonLifetime = 15; // 10 seconds before completing the wave
+        this.dragonFireballs = []; // Array to store dragon fireballs
+        this.dragonFireballInterval = 1.0; // Shoot a fireball every 1 second
+        // -------------------------------------------
+        
         this.setupSounds();
         this.initializeProperties();
         this.setupGameState();
@@ -215,6 +231,8 @@ class BaseBackground {
         this.mushrooms = [];
         this.enemyShooters = [];
         this.enemyShooterProjectiles = [];
+        this.dragon = null; // Reset the dragon
+        this.dragonFireballs = []; // Reset the dragon fireballs
 
         // Reset shockwave state
         this.shockwaveActive = false;
@@ -269,6 +287,8 @@ class BaseBackground {
         this.enemyBigBirds = [];
         this.enemyShooters = [];
         this.enemyShooterProjectiles = [];
+        this.dragon = null; // Clear the dragon when starting/restarting the game
+        this.dragonFireballs = []; // Clear the dragon fireballs
         this.evilWaveActive = false;
         this.evilWaveTriggered = false;
         this.evilWaveBirdsSpawned = 0;
@@ -571,35 +591,46 @@ class BaseBackground {
                 }
             };
             spawnNextBird();
+        } else if (this.level === 3) {
+            // --- NEW: Spawn the Dragon for Level 3's finale ---
+            this.spawnDragon();
+            
+            // Set a timeout to end the dragon encounter after its lifetime
+            setTimeout(() => {
+                this.evilWaveActive = false;
+                this.gameCompleted = true;
+                this.gameCompletedMessageTime = this.GAME_COMPLETED_DURATION;
+                
+                // Deactivate powerups before showing victory message
+                const bird = this.getBird();
+                if (bird) {
+                    // Deactivate invincibility
+                    bird.invincible = false;
+                    bird.invincibleTimer = 0;
+                    bird.powerUpAnimation.active = false;
+                    if (bird.powerSoundLoop) {
+                        bird.powerSoundLoop.pause();
+                        bird.powerSoundLoop = null;
+                    }
+                }
+                
+                // Deactivate shockwave
+                this.shockwaveActive = false;
+                this.shockwave.life = 0;
+                
+                this.enemyShooters = [];
+                this.enemyShooterProjectiles = [];
+                this.snappingPlants = [];
+                this.pipeArray = [];
+                this.dragon = null;
+                this.dragonFireballs = []; // Clear dragon fireballs
+            }, this.dragonLifetime * 1000);
         } else {
             setTimeout(() => {
                 this.evilWaveActive = false;
                 
                 if (this.level === 3) {
-                    this.gameCompleted = true;
-                    this.gameCompletedMessageTime = this.GAME_COMPLETED_DURATION;
-                    
-                    // Deactivate powerups before showing victory message
-                    const bird = this.getBird();
-                    if (bird) {
-                        // Deactivate invincibility
-                        bird.invincible = false;
-                        bird.invincibleTimer = 0;
-                        bird.powerUpAnimation.active = false;
-                        if (bird.powerSoundLoop) {
-                            bird.powerSoundLoop.pause();
-                            bird.powerSoundLoop = null;
-                        }
-                    }
-                    
-                    // Deactivate shockwave
-                    this.shockwaveActive = false;
-                    this.shockwave.life = 0;
-                    
-                    this.enemyShooters = [];
-                    this.enemyShooterProjectiles = [];
-                    this.snappingPlants = [];
-                    this.pipeArray = [];
+                    // This code is now handled in the level 3 specific block above
                 } else {
                     this.levelPassedMessageTime = this.levelPassedMessageDuration;
                     this.postEvilWaveDelayTimer = this.postEvilWaveDelay;
@@ -777,6 +808,12 @@ class BaseBackground {
     
         this.updateEnemyBirds();
     
+        // --- NEW: Update the Dragon if it exists ---
+        if (this.dragon) {
+            this.updateDragon();
+        }
+        // ---------------------------------------
+        
         if (this.evilWaveActive &&
             this.evilWaveBirdsSpawned >= 8 &&
             this.enemyBigBirds.length === 0 &&
@@ -1294,6 +1331,17 @@ class BaseBackground {
                 }
             }
         });
+
+        // Check collisions with Dragon fireballs
+        for (let i = this.dragonFireballs.length - 1; i >= 0; i--) {
+            const fireball = this.dragonFireballs[i];
+            if (this.checkDragonFireballCollisionWithBird(bird, fireball)) {
+                this.dragonFireballs.splice(i, 1); // Remove the fireball
+                if (!bird.invincible) {
+                    this.handleCollision(bird);
+                }
+            }
+        }
     }
 
     checkPipeCollision(bird, pipe) {
@@ -2142,6 +2190,65 @@ class BaseBackground {
             this.drawVictoryEffects(ctx);
         }
 
+        // --- NEW: Draw the Dragon if it exists ---
+        if (this.dragon) {
+            const frameIndex = Math.floor(this.dragon.elapsedTime / this.dragonFrameDuration) % this.dragonFrameCount;
+            ctx.drawImage(
+                this.dragonSprite,
+                frameIndex * this.dragonWidth, 0, this.dragonWidth, this.dragonHeight,
+                this.dragon.x, this.dragon.y, this.dragon.width, this.dragon.height
+            );
+            
+            // Draw dragon fireballs
+            this.dragonFireballs.forEach(fireball => {
+                // Draw the particles (trail)
+                fireball.particles.forEach(particle => {
+                    const opacity = particle.life / particle.maxLife;
+                    ctx.globalAlpha = opacity;
+                    ctx.fillStyle = particle.color;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                
+                ctx.globalAlpha = 1.0;
+                
+                // Draw the fireball with gradient
+                const gradient = ctx.createRadialGradient(
+                    fireball.x, fireball.y, 0,
+                    fireball.x, fireball.y, fireball.radius
+                );
+                
+                gradient.addColorStop(0, 'white'); // Hot center
+                gradient.addColorStop(0.2, fireball.colors.core); // Core
+                gradient.addColorStop(0.6, fireball.colors.mid); // Mid layer
+                gradient.addColorStop(1, fireball.colors.outer); // Outer layer
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(fireball.x, fireball.y, fireball.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add glow effect
+                ctx.globalAlpha = 0.4;
+                ctx.fillStyle = fireball.colors.outer;
+                ctx.beginPath();
+                ctx.arc(fireball.x, fireball.y, fireball.radius * 1.8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add pulsing effect
+                const pulseSize = fireball.radius * (1 + 0.25 * Math.sin(fireball.elapsedTime * 12));
+                ctx.globalAlpha = 0.2;
+                ctx.fillStyle = 'rgba(255, 220, 150, 0.6)';
+                ctx.beginPath();
+                ctx.arc(fireball.x, fireball.y, pulseSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Reset global alpha
+                ctx.globalAlpha = 1.0;
+            });
+        }
+        // ---------------------------------------
     }
 
     drawGameOver(ctx) {
@@ -2530,6 +2637,7 @@ class BaseBackground {
         
         const shockwave = this.shockwave;
         
+        // Repel enemy shooter projectiles
         this.enemyShooterProjectiles.forEach(projectile => {
             // Calculate distance from projectile to shockwave center
             const dx = projectile.x - shockwave.x;
@@ -2569,5 +2677,303 @@ class BaseBackground {
                 }
             }
         });
+        
+        // Repel dragon fireballs (same logic as above)
+        this.dragonFireballs.forEach(fireball => {
+            // Calculate distance from fireball to shockwave center
+            const dx = fireball.x - shockwave.x;
+            const dy = fireball.y - shockwave.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Check if fireball is within shockwave radius
+            if (distance < shockwave.radius) {
+                // Calculate normalized direction vector from shockwave center to fireball
+                const dirX = dx / distance;
+                const dirY = dy / distance;
+                
+                // Calculate repulsion force (stronger as fireball gets closer to center)
+                const forceFactor = 1 - (distance / shockwave.radius);
+                // Slightly stronger repulsion for dragon fireballs since they're larger
+                const repulsionForce = 90 * forceFactor * this.game.clockTick;
+                
+                // Apply repulsion force to fireball velocity
+                fireball.vx += dirX * repulsionForce;
+                fireball.vy += dirY * repulsionForce;
+                
+                // Update fireball angle for visual effects
+                fireball.angle = Math.atan2(fireball.vy, fireball.vx);
+                
+                // Add more dramatic visual effect to show repulsion
+                if (Math.random() < 0.6) { // Higher particle frequency for dragon fireballs
+                    const size = 10 + Math.random() * 15;
+                    const life = 0.5 + Math.random() * 0.2;
+                    const speed = 1 + Math.random() * 2;
+                    const sparkAngle = Math.random() * Math.PI * 2;
+                    
+                    fireball.particles.push({
+                        x: fireball.x,
+                        y: fireball.y,
+                        size: size,
+                        life: life,
+                        maxLife: life,
+                        vx: Math.cos(sparkAngle) * speed,
+                        vy: Math.sin(sparkAngle) * speed,
+                        color: Math.random() < 0.5 ? '#FFD700' : '#FF4500'
+                    });
+                }
+            }
+        });
+    }
+
+    // --- NEW: Method to spawn the Dragon for level 3 ---
+    spawnDragon() {
+        // Position the dragon on the right side of the screen
+        const x = this.width - (this.dragonWidth * this.dragonScale) * 1.2;
+        
+        // Position at a middle height with some room to hover up and down
+        const y = this.height / 2 - (this.dragonHeight * this.dragonScale) / 2;
+        
+        this.dragon = {
+            x: x,
+            y: y,
+            width: this.dragonWidth * this.dragonScale,
+            height: this.dragonHeight * this.dragonScale,
+            elapsedTime: 0,
+            startX: x,
+            startY: y,
+            hoverDirection: 1,
+            hoverOffset: 0,
+            horizontalDirection: -1,
+            horizontalOffset: 0,
+            horizontalRange: this.width * 0.3, // 30% of screen width for horizontal movement
+            horizontalSpeed: 2.5,
+            circleAngle: 0,
+            circleRadius: 50,
+            circleSpeed: 0.02,
+            movementPattern: 'circle', // Options: 'hover', 'horizontal', 'circle', 'figure8'
+            patternTimer: 0,
+            patternDuration: 5, // Change pattern every 5 seconds
+            shootTimer: 0,
+            shootInterval: this.dragonFireballInterval
+        };
+        
+        this.dangerDisplayTime = this.DANGER_DURATION;
+    }
+    
+    // --- NEW: Method to update the Dragon ---
+    updateDragon() {
+        if (!this.dragon) return;
+        
+        // Update animation timing
+        this.dragon.elapsedTime += this.game.clockTick;
+        
+        // Update pattern timer and potentially change patterns
+        this.dragon.patternTimer += this.game.clockTick;
+        if (this.dragon.patternTimer >= this.dragon.patternDuration) {
+            this.dragon.patternTimer = 0;
+            
+            // Switch to a random movement pattern
+            const patterns = ['hover', 'horizontal', 'circle', 'figure8'];
+            this.dragon.movementPattern = patterns[Math.floor(Math.random() * patterns.length)];
+        }
+        
+        // Apply the selected movement pattern
+        switch (this.dragon.movementPattern) {
+            case 'hover':
+                // Simple up and down movement
+                this.dragon.hoverOffset += this.dragonHoverSpeed * this.dragon.hoverDirection;
+                
+                if (Math.abs(this.dragon.hoverOffset) >= this.dragonHoverRange) {
+                    this.dragon.hoverDirection *= -1;
+                }
+                
+                this.dragon.y = this.dragon.startY + this.dragon.hoverOffset;
+                break;
+                
+            case 'horizontal':
+                // Move side to side
+                this.dragon.horizontalOffset += this.dragon.horizontalSpeed * this.dragon.horizontalDirection;
+                
+                if (Math.abs(this.dragon.horizontalOffset) >= this.dragon.horizontalRange) {
+                    this.dragon.horizontalDirection *= -1;
+                }
+                
+                this.dragon.x = this.dragon.startX + this.dragon.horizontalOffset;
+                
+                // Add slight vertical movement
+                this.dragon.hoverOffset += this.dragonHoverSpeed * 0.5 * this.dragon.hoverDirection;
+                if (Math.abs(this.dragon.hoverOffset) >= this.dragonHoverRange) {
+                    this.dragon.hoverDirection *= -1;
+                }
+                this.dragon.y = this.dragon.startY + this.dragon.hoverOffset;
+                break;
+                
+            case 'circle':
+                // Move in a circular pattern
+                this.dragon.circleAngle += this.dragon.circleSpeed;
+                
+                this.dragon.x = this.dragon.startX + Math.cos(this.dragon.circleAngle) * this.dragon.circleRadius;
+                this.dragon.y = this.dragon.startY + Math.sin(this.dragon.circleAngle) * this.dragon.circleRadius;
+                break;
+                
+            case 'figure8':
+                // Move in a figure-8 pattern
+                this.dragon.circleAngle += this.dragon.circleSpeed;
+                
+                this.dragon.x = this.dragon.startX + Math.cos(this.dragon.circleAngle) * this.dragon.circleRadius;
+                this.dragon.y = this.dragon.startY + Math.sin(2 * this.dragon.circleAngle) * this.dragon.circleRadius / 2;
+                break;
+        }
+        
+        // Add some randomness to make movement less predictable
+        if (Math.random() < 0.01) { // 1% chance each update
+            // Randomly adjust position slightly
+            this.dragon.x += (Math.random() - 0.5) * 10;
+            this.dragon.y += (Math.random() - 0.5) * 10;
+        }
+        
+        // Keep dragon within screen bounds
+        const minX = this.width * 0.5; // Don't go further left than middle of screen
+        const maxX = this.width - this.dragon.width;
+        const minY = this.dragon.height / 2;
+        const maxY = this.height - this.dragon.height;
+        
+        this.dragon.x = Math.max(minX, Math.min(maxX, this.dragon.x));
+        this.dragon.y = Math.max(minY, Math.min(maxY, this.dragon.y));
+        
+        // Update shooting timer
+        this.dragon.shootTimer += this.game.clockTick;
+        
+        // Shoot fireballs periodically
+        if (this.dragon.shootTimer >= this.dragon.shootInterval) {
+            this.spawnDragonFireball();
+            this.dragon.shootTimer = 0;
+        }
+        
+        // Update dragon fireballs
+        this.updateDragonFireballs();
+    }
+    
+    // --- NEW: Method to spawn dragon fireballs ---
+    spawnDragonFireball() {
+        if (!this.dragon) return;
+        
+        const bird = this.getBird();
+        if (!bird) return;
+        
+        // Get dragon mouth position (approximately left side of the dragon)
+        const dragonMouthX = this.dragon.x;
+        const dragonMouthY = this.dragon.y + this.dragon.height * 0.4; // Position mouth at 40% from top
+        
+        // Calculate bird center
+        const birdLeft = bird.x + this.BIRD_X_OFFSET;
+        const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        const birdCenterX = birdLeft + this.BIRD_WIDTH / 2;
+        const birdCenterY = birdTop + this.BIRD_HEIGHT / 2;
+        
+        // Calculate direction to bird
+        const dx = birdCenterX - dragonMouthX;
+        const dy = birdCenterY - dragonMouthY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Define fireball speed
+        const speed = 500; // Slightly slower than enemy shooter projectiles
+        const vx = (dx / distance) * speed;
+        const vy = (dy / distance) * speed;
+        
+        // Create the fireball
+        const fireball = {
+            x: dragonMouthX,
+            y: dragonMouthY,
+            vx: vx * this.game.clockTick,
+            vy: vy * this.game.clockTick,
+            radius: 25, // Larger radius for dragon fireballs
+            angle: Math.atan2(vy, vx),
+            elapsedTime: 0,
+            particles: [],
+            colors: {
+                core: '#FF3300', // Bright red
+                mid: '#FF9900', // Orange
+                outer: '#FFCC00'  // Yellow-gold
+            }
+        };
+        
+        this.dragonFireballs.push(fireball);
+    }
+    
+    // --- NEW: Method to update dragon fireballs ---
+    updateDragonFireballs() {
+        // Update each fireball position and effects
+        this.dragonFireballs.forEach(fireball => {
+            fireball.x += fireball.vx;
+            fireball.y += fireball.vy;
+            fireball.elapsedTime += this.game.clockTick;
+            
+            // Add particle effects for the trail (similar to enemy projectiles)
+            if (Math.random() < 0.5) { // More particles for dragon fireballs
+                const particleSize = 8 + Math.random() * 12;
+                const particleLife = 0.4 + Math.random() * 0.4;
+                const particleSpeed = 0.6 + Math.random() * 1.2;
+                
+                // Random offset from center
+                const offsetX = (Math.random() - 0.5) * 20;
+                const offsetY = (Math.random() - 0.5) * 20;
+                
+                // Calculate velocity opposite to fireball direction
+                const particleAngle = fireball.angle + Math.PI + (Math.random() - 0.5) * 0.8;
+                
+                fireball.particles.push({
+                    x: fireball.x + offsetX,
+                    y: fireball.y + offsetY,
+                    size: particleSize,
+                    life: particleLife,
+                    maxLife: particleLife,
+                    vx: Math.cos(particleAngle) * particleSpeed,
+                    vy: Math.sin(particleAngle) * particleSpeed,
+                    color: Math.random() < 0.5 ? fireball.colors.mid : fireball.colors.outer
+                });
+            }
+            
+            // Update particles
+            for (let i = fireball.particles.length - 1; i >= 0; i--) {
+                const particle = fireball.particles[i];
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life -= this.game.clockTick;
+                
+                if (particle.life <= 0) {
+                    fireball.particles.splice(i, 1);
+                }
+            }
+        });
+        
+        // Remove fireballs that are off-screen
+        this.dragonFireballs = this.dragonFireballs.filter(fireball => {
+            return fireball.x + fireball.radius > 0 && 
+                   fireball.x - fireball.radius < this.width &&
+                   fireball.y + fireball.radius > 0 &&
+                   fireball.y - fireball.radius < this.height;
+        });
+    }
+
+    // --- NEW: Method to check collision between dragon fireball and bird ---
+    checkDragonFireballCollisionWithBird(bird, fireball) {
+        // Same collision detection as with projectiles
+        const birdLeft = bird.x + this.BIRD_X_OFFSET;
+        const birdTop = bird.y + (70 * 1.2 - this.BIRD_HEIGHT) / 2;
+        
+        // Bird center
+        const birdCenterX = birdLeft + this.BIRD_WIDTH / 2;
+        const birdCenterY = birdTop + this.BIRD_HEIGHT / 2;
+        
+        // Distance between centers
+        const dx = fireball.x - birdCenterX;
+        const dy = fireball.y - birdCenterY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Check if distance is less than the sum of radii
+        // Using a slightly smaller collision radius than visual radius for gameplay feel
+        const collisionRadius = fireball.radius * 0.8;
+        return distance < (collisionRadius + this.BIRD_WIDTH / 2);
     }
 }

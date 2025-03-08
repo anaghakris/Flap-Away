@@ -514,7 +514,8 @@ class Background extends BaseBackground {
             !this.evilWaveActive && 
             this.levelPassedMessageTime <= 0 && 
             this.postEvilWaveDelayTimer <= 0 &&
-            !this.gameCompleted) {
+            !this.gameCompleted &&
+            !this.dragon) {
             
             this.gameCompleted = true;
             this.gameCompletedMessageTime = this.GAME_COMPLETED_DURATION;
