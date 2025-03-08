@@ -1395,6 +1395,8 @@ class BaseBackground {
         for (let i = this.dragonFireballs.length - 1; i >= 0; i--) {
             const fireball = this.dragonFireballs[i];
             if (this.checkDragonFireballCollisionWithBird(bird, fireball)) {
+                // Create explosion at the point of impact
+                this.createFireballExplosion(fireball.x, fireball.y);
                 this.dragonFireballs.splice(i, 1); // Remove the fireball
                 if (!bird.invincible) {
                     this.handleCollision(bird);
@@ -1859,6 +1861,13 @@ class BaseBackground {
                     gradient.addColorStop(0, `rgba(100, 220, 255, ${explosion.light.intensity * 0.8})`);
                     gradient.addColorStop(0.5, `rgba(0, 180, 255, ${explosion.light.intensity * 0.4})`);
                     gradient.addColorStop(1, 'rgba(0, 50, 255, 0)');
+                } else if (explosion.light.isFireball) {
+                    // Fireball explosion light gradient - more intense and fiery
+                    gradient.addColorStop(0, `rgba(255, 255, 255, ${explosion.light.intensity * 0.9})`); // White hot center
+                    gradient.addColorStop(0.2, `rgba(255, 240, 50, ${explosion.light.intensity * 0.8})`); // Yellow
+                    gradient.addColorStop(0.5, `rgba(255, 120, 0, ${explosion.light.intensity * 0.6})`);  // Orange
+                    gradient.addColorStop(0.8, `rgba(255, 50, 0, ${explosion.light.intensity * 0.4})`);   // Red
+                    gradient.addColorStop(1, 'rgba(100, 0, 0, 0)');  // Dark red fading to transparent
                 } else {
                     // Regular explosion light gradient
                     gradient.addColorStop(0, `rgba(255, 220, 50, ${explosion.light.intensity * 0.8})`);
@@ -1940,27 +1949,49 @@ class BaseBackground {
             }
             
             explosion.particles.forEach(particle => {
+                ctx.save();
+                const opacity = particle.life / particle.maxLife;
+                ctx.globalAlpha = opacity;
                 ctx.fillStyle = particle.color;
-                ctx.globalAlpha = particle.life / particle.maxLife;
                 
-                if (particle.isElectric) {
-                    // Render electric particles as small lightning shapes
-                    const size = particle.size;
+                if (particle.type === 'smoke') {
+                    // Draw smoke with soft edges for fireball explosions
+                    const smokeGradient = ctx.createRadialGradient(
+                        particle.x, particle.y, 0, 
+                        particle.x, particle.y, particle.size
+                    );
+                    smokeGradient.addColorStop(0, particle.color);
+                    smokeGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                    ctx.fillStyle = smokeGradient;
+                } else if (particle.type === 'ember') {
+                    // Add glow to ember particles
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = 'rgba(255, 200, 50, 0.8)';
+                }
+                
+                // Draw different shapes based on particle type
+                ctx.beginPath();
+                if (particle.type === 'flame' && particle.rotation !== undefined) {
+                    // Draw flame-shaped particles
+                    ctx.translate(particle.x, particle.y);
+                    ctx.rotate(particle.rotation);
                     
-                    // Draw a simple lightning bolt shape
-                    ctx.beginPath();
-                    ctx.moveTo(particle.x - size, particle.y);
-                    ctx.lineTo(particle.x - size/2, particle.y - size/2);
-                    ctx.lineTo(particle.x + size/3, particle.y);
-                    ctx.lineTo(particle.x, particle.y + size/2);
-                    ctx.lineTo(particle.x + size, particle.y - size/4);
-                    ctx.fill();
+                    const flameHeight = particle.size * 1.5;
+                    ctx.moveTo(0, -flameHeight/2);
+                    ctx.quadraticCurveTo(flameHeight/3, -flameHeight/6, 0, flameHeight/2);
+                    ctx.quadraticCurveTo(-flameHeight/3, -flameHeight/6, 0, -flameHeight/2);
                 } else {
                     // Regular circular particles
-                    ctx.beginPath();
                     ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                    ctx.fill();
                 }
+                ctx.fill();
+                
+                // Reset shadow effects
+                if (particle.type === 'ember') {
+                    ctx.shadowBlur = 0;
+                }
+                
+                ctx.restore();
             });
             
             ctx.globalAlpha = 1;
@@ -3036,7 +3067,7 @@ class BaseBackground {
             y: dragonMouthY,
             vx: vx * this.game.clockTick,
             vy: vy * this.game.clockTick,
-            radius: 25, // Base radius for dragon fireballs
+            radius: 40, // Increased radius for dragon fireballs (was 25)
             angle: Math.atan2(vy, vx),
             elapsedTime: 0,
             flickerTime: 0,
@@ -3052,7 +3083,7 @@ class BaseBackground {
                 smoke: 'rgba(80, 80, 80, 0.5)' // Smoke color
             },
             // Store original size to allow for pulsing
-            originalRadius: 25,
+            originalRadius: 40, // Increased (was 25)
             pulseAmount: 0.2,
             // Size variation for more organic look
             sizeVariation: 1.0
@@ -3209,5 +3240,90 @@ class BaseBackground {
         // Using a slightly smaller collision radius than visual radius for gameplay feel
         const collisionRadius = fireball.radius * 0.8;
         return distance < (collisionRadius + this.BIRD_WIDTH / 2);
+    }
+
+    // Method to create a fireball explosion effect when hitting the player
+    createFireballExplosion(x, y) {
+        const particleCount = 60 + Math.floor(Math.random() * 30); // More particles than plant explosion
+        const particles = [];
+        
+        // Create explosion particles with fire colors
+        for (let i = 0; i < particleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 2 + Math.random() * 8; // Faster than plant particles
+            const size = 3 + Math.random() * 8; // Larger particles
+            const life = 0.4 + Math.random() * 1.2;
+            
+            // Determine particle type (flame, ember, or smoke)
+            const particleType = Math.random();
+            let color;
+            
+            if (particleType < 0.5) { // 50% flame particles
+                // Fire colors - bright yellows, oranges, and reds
+                const r = 200 + Math.random() * 55;
+                const g = 50 + Math.random() * 150;
+                const b = Math.random() * 50;
+                color = `rgb(${r}, ${g}, ${b})`;
+            } else if (particleType < 0.9) { // 40% ember particles
+                // Embers - bright white-yellow to orange
+                color = Math.random() < 0.5 ? 
+                    'rgb(255, 230, 100)' : 
+                    'rgb(255, 150, 50)';
+            } else { // 10% smoke particles
+                // Dark smoke
+                const grey = 30 + Math.random() * 70;
+                color = `rgba(${grey}, ${grey}, ${grey}, 0.7)`;
+            }
+            
+            particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                size: size,
+                life: life,
+                maxLife: life,
+                color: color,
+                type: particleType < 0.5 ? 'flame' : (particleType < 0.9 ? 'ember' : 'smoke'),
+                opacity: 1.0,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.2
+            });
+        }
+        
+        // Create larger, more intense shockwave than plant explosion
+        const shockwave = {
+            x: x,
+            y: y,
+            radius: 5,
+            maxRadius: 120, // Larger radius than plant explosion
+            life: 0.7,
+            maxLife: 0.7,
+            color: 'rgba(255, 100, 0, 0.7)'
+        };
+        
+        // Create brighter light effect
+        const light = {
+            radius: 150, // Larger light radius
+            life: 0.5,
+            maxLife: 0.5,
+            intensity: 1.0,
+            isFireball: true // Flag to use fire colors
+        };
+        
+        // Play explosion sound with more bass/volume than plant explosion
+        if (this.plantDeathSound) {
+            const sound = this.plantDeathSound.cloneNode();
+            sound.volume = 0.6; // Louder than plant death
+            sound.play();
+        }
+        
+        this.plantExplosions.push({
+            particles: particles,
+            shockwave: shockwave,
+            x: x,
+            y: y,
+            light: light
+        });
     }
 }
