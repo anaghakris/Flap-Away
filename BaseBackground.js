@@ -313,17 +313,27 @@ class BaseBackground {
     setupPipeSpawning() {
         if (this.pipeSpawnInterval) {
             clearInterval(this.pipeSpawnInterval);
+            this.pipeSpawnInterval = null;
         }
+        
+        // Don't set up pipe spawning if dragon wave is active
+        if (this.evilWaveActive && this.level === 3 && this.dragon) {
+            return;
+        }
+        
         this.pipeSpawnInterval = setInterval(() => {
-            if (this.gameStarted && !this.game.gameOver && !this.evilWaveActive && this.postEvilWaveDelayTimer <= 0) {
+            // Double-check here to make sure no pipes spawn during dragon wave
+            if (this.gameStarted && !this.game.gameOver && !this.evilWaveActive && this.postEvilWaveDelayTimer <= 0 && (!this.dragon || this.level !== 3)) {
                 this.spawnPipePair();
             }
         }, this.pipeInterval);
     }
 
     spawnPipePair() {
-        if (!this.gameStarted || this.game.gameOver || this.evilWaveActive || this.postEvilWaveDelayTimer > 0)
+        // Don't spawn pipes if dragon wave is active or dragon exists
+        if (!this.gameStarted || this.game.gameOver || this.evilWaveActive || this.postEvilWaveDelayTimer > 0 || this.dragon)
             return;
+            
         const hasSnappingPlant = this.pipePairCount % 2 === 0;
         let minOpening, maxOpening;
         let isNarrowPipeInLevel3 = false;
@@ -571,8 +581,29 @@ class BaseBackground {
         this.snappingPlants = [];
         this.coins = [];
         this.enemyShooters = [];
-        clearInterval(this.pipeSpawnInterval);
-        this.pipeSpawnInterval = null;
+        
+        // Clear pipe spawning interval completely
+        if (this.pipeSpawnInterval) {
+            clearInterval(this.pipeSpawnInterval);
+            this.pipeSpawnInterval = null;
+        }
+
+        // Immediately deactivate powerups at start of dragon wave
+        const bird = this.getBird();
+        if (bird) {
+            // Deactivate invincibility
+            bird.invincible = false;
+            bird.invincibleTimer = 0;
+            bird.powerUpAnimation.active = false;
+            if (bird.powerSoundLoop) {
+                bird.powerSoundLoop.pause();
+                bird.powerSoundLoop = null;
+            }
+        }
+        
+        // Deactivate shockwave
+        this.shockwaveActive = false;
+        this.shockwave.life = 0;
 
         if (this.level === 1) {
             this.evilWaveBirdsSpawned = 0;
@@ -738,6 +769,27 @@ class BaseBackground {
         if (!this.gameStarted || this.game.gameOver) return;
     
         const bird = this.getBird();
+        
+        // Ensure powerups remain deactivated while dragon is present
+        if (this.dragon && bird) {
+            // Deactivate invincibility
+            if (bird.invincible) {
+                bird.invincible = false;
+                bird.invincibleTimer = 0;
+                bird.powerUpAnimation.active = false;
+                if (bird.powerSoundLoop) {
+                    bird.powerSoundLoop.pause();
+                    bird.powerSoundLoop = null;
+                }
+            }
+            
+            // Deactivate shockwave
+            if (this.shockwaveActive) {
+                this.shockwaveActive = false;
+                this.shockwave.life = 0;
+            }
+        }
+        
         if (this.gameCompleted) {
             // Make sure the bird is controlled/paused when game is completed
             if (bird) {
