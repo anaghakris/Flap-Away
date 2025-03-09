@@ -116,28 +116,30 @@ class StartPage {
             ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
             ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             
-            let startY = 100; 
-            const lineHeight = 24; 
+            const isCreatorsSection = this.infoText[0] === "CREATORS";
+            
+            let startY = isCreatorsSection ? 150 : 100;
+            const lineHeight = isCreatorsSection ? 40 : 24;
             
             ctx.textAlign = "center";
             
             this.infoText.forEach((line, index) => {
                 if (index === 0) {
-                    ctx.font = "24px 'Press Start 2P', monospace"; 
+                    ctx.font = isCreatorsSection ? "32px 'Press Start 2P', monospace" : "24px 'Press Start 2P', monospace";
                     ctx.fillStyle = "#FFD700";
-                    startY += 5; 
+                    if (!isCreatorsSection) startY += 5;
                 } else if (line === "") {
-                    startY += lineHeight/3; 
+                    startY += isCreatorsSection ? lineHeight/2 : lineHeight/3;
                     return;
                 } else if (line.includes("Press ENTER")) {
-                    ctx.font = "12px 'Press Start 2P', monospace"; 
+                    ctx.font = isCreatorsSection ? "16px 'Press Start 2P', monospace" : "12px 'Press Start 2P', monospace";
                     ctx.fillStyle = "#AAAAAA";
-                } else if (line.startsWith("LEVELS:") || line.startsWith("DANGER:") || line.startsWith("CONTROLS:")) {
+                } else if (!isCreatorsSection && (line.startsWith("LEVELS:") || line.startsWith("DANGER:") || line.startsWith("CONTROLS:"))) {
                     ctx.font = "14px 'Press Start 2P', monospace";
                     ctx.fillStyle = "#FFD700"; 
-                    startY += 5; 
+                    startY += 5;
                 } else {
-                    ctx.font = "12px 'Press Start 2P', monospace"; 
+                    ctx.font = isCreatorsSection ? "16px 'Press Start 2P', monospace" : "12px 'Press Start 2P', monospace";
                     ctx.fillStyle = "#FFFFFF";
                 }
                 
