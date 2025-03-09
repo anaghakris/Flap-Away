@@ -116,6 +116,12 @@ class BaseBackground {
         this.MIN_SOUND_INTERVAL = 150;
         this.dieSound = ASSET_MANAGER.getAsset("./audio/sfx_die.wav");
         this.dieSound.volume = 0.6;
+
+        this.dragonSound = ASSET_MANAGER.getAsset("./audio/Dragon.wav");
+        if (this.dragonSound) {
+            this.dragonSound.volume = 0.5;
+            this.dragonSound.loop = true; // Make it loop while the dragon is active
+        }
         
         // Sound for dragon fireballs
         this.fireWhooshSound = ASSET_MANAGER.getAsset("./audio/sfx_swooshing.wav");
@@ -221,7 +227,12 @@ class BaseBackground {
     reset() {
         this.health = 3;
         this.coinsForHeart = 0;
-    
+        
+        if (this.dragonSound && !this.dragonSound.paused) {
+            this.dragonSound.pause();
+            this.dragonSound.currentTime = 0;
+        }
+        
         this.chanceMessage = "";
         this.chanceMessageTimer = 0;
     
@@ -649,6 +660,11 @@ class BaseBackground {
                     this.gameCompleted = true;
                     this.gameCompletedMessageTime = this.GAME_COMPLETED_DURATION;
                     
+                    if (this.dragonSound && !this.dragonSound.paused) {
+                        this.dragonSound.pause();
+                        this.dragonSound.currentTime = 0;
+                    }
+
                     const bird = this.getBird();
                     if (bird) {
                         bird.invincible = false;
@@ -1580,7 +1596,12 @@ class BaseBackground {
             if (this.health <= 0) {
                 this.game.gameOver = true;
                 this.game.hasCollided = true;
-                
+
+                if (this.dragon && this.dragonSound && !this.dragonSound.paused) {
+                    this.dragonSound.pause();
+                    this.dragonSound.currentTime = 0;
+                }
+
                 if (this.dragon) {
                     this.gameCompleted = false;
                     this.gameCompletedMessageTime = 0;                    
@@ -2966,6 +2987,10 @@ class BaseBackground {
             shootTimer: 0,
             shootInterval: this.dragonFireballInterval
         };
+        if (this.dragonSound) {
+            this.dragonSound.currentTime = 0;
+            this.dragonSound.play().catch(e => console.log("Failed to play dragon sound:", e));
+        }
         
         this.dangerDisplayTime = this.DANGER_DURATION;
     }

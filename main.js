@@ -31,6 +31,7 @@ ASSET_MANAGER.queueDownload("./Sprites/Pipes/level3pipe.png");
 ASSET_MANAGER.queueDownload("./Sprites/Background/level3base.png");
 ASSET_MANAGER.queueDownload("./Sprites/Enemy/sprite_sheet.png");
 ASSET_MANAGER.queueDownload("./Sprites/Dragon/sprite_sheet.png");
+ASSET_MANAGER.queueDownload("./audio/Dragon.wav");
 
 
 
