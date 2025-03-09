@@ -116,23 +116,28 @@ class StartPage {
             ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
             ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             
-            let startY = 150;
-            const lineHeight = 40;
+            let startY = 100; 
+            const lineHeight = 24; 
             
             ctx.textAlign = "center";
             
             this.infoText.forEach((line, index) => {
                 if (index === 0) {
-                    ctx.font = "32px 'Press Start 2P', monospace";
+                    ctx.font = "24px 'Press Start 2P', monospace"; 
                     ctx.fillStyle = "#FFD700";
+                    startY += 5; 
                 } else if (line === "") {
-                    startY += lineHeight/2;
+                    startY += lineHeight/3; 
                     return;
                 } else if (line.includes("Press ENTER")) {
-                    ctx.font = "16px 'Press Start 2P', monospace";
+                    ctx.font = "12px 'Press Start 2P', monospace"; 
                     ctx.fillStyle = "#AAAAAA";
+                } else if (line.startsWith("LEVELS:") || line.startsWith("DANGER:") || line.startsWith("CONTROLS:")) {
+                    ctx.font = "14px 'Press Start 2P', monospace";
+                    ctx.fillStyle = "#FFD700"; 
+                    startY += 5; 
                 } else {
-                    ctx.font = "16px 'Press Start 2P', monospace";
+                    ctx.font = "12px 'Press Start 2P', monospace"; 
                     ctx.fillStyle = "#FFFFFF";
                 }
                 
@@ -142,20 +147,20 @@ class StartPage {
             
             return;
         }
-
+    
         ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
         ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
+    
         ctx.font = "48px 'Press Start 2P', monospace";
         ctx.fillStyle = "#FFFFFF";
         ctx.textAlign = "center";
         ctx.fillText("Flap Away", ctx.canvas.width/2, 150);
-
+    
         ctx.font = "24px 'Press Start 2P', monospace";
         
         for (let i = 0; i < this.options.length; i++) {
             const y = this.menuStartY + (i * this.menuSpacing);
-
+    
             if (i === this.selectedOption) {
                 ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
                 ctx.fillRect(
@@ -168,9 +173,9 @@ class StartPage {
             } else {
                 ctx.fillStyle = "#FFFFFF";
             }
-
+    
             ctx.fillText(this.options[i], ctx.canvas.width/2, y);
-
+    
             if (i === this.selectedOption) {
                 ctx.font = "32px 'Press Start 2P', monospace";  
                 ctx.fillText(">>>>", ctx.canvas.width/2 - this.menuItemWidth/1 - 60, y);
@@ -178,7 +183,7 @@ class StartPage {
                 ctx.font = "24px 'Press Start 2P', monospace"; 
             }
         }
-
+    
         ctx.font = "16px 'Press Start 2P', monospace";
         ctx.fillStyle = "#FFFFFF";
         ctx.fillText("Use ↑↓ arrows to select, ENTER to confirm", ctx.canvas.width/2, ctx.canvas.height - 50);
