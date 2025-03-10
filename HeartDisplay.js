@@ -41,7 +41,7 @@ class HeartDisplay {
         const xOffset = Math.sin(time * Math.PI * 2) * 3;
 
         if (isNewHeart) {
-            ctx.shadowColor = 'rgba(255, 215, 0, 0.8)'; w
+            ctx.shadowColor = 'rgba(255, 215, 0, 0.8)'; 
             ctx.shadowBlur = 20;
         } else {
             ctx.shadowColor = 'rgba(255, 0, 0, 0.5)';
