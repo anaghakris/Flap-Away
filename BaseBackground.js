@@ -606,6 +606,7 @@ class BaseBackground {
         this.snappingPlants = [];
         this.coins = [];
         this.enemyShooters = [];
+        this.enemyShooterProjectiles = []; // Clear enemy shooter projectiles
         
         // Clear pipe spawning interval completely
         if (this.pipeSpawnInterval) {
@@ -800,6 +801,12 @@ class BaseBackground {
             if (this.game.gameOver && this.dragon) {
                 this.gameCompleted = false;
                 this.gameCompletedMessageTime = 0;
+                
+                // Stop dragon sound when game is over
+                if (this.dragonSound && !this.dragonSound.paused) {
+                    this.dragonSound.pause();
+                    this.dragonSound.currentTime = 0;
+                }
             }
             return;
         }
@@ -2125,7 +2132,10 @@ class BaseBackground {
         }
     
         if (this.game.gameOver) {
+            this.dragonFireballs = [];
+            this.enemyShooterProjectiles = [];
             this.drawGameOver(ctx);
+            return;
         } else if (!this.gameStarted) {
             ctx.font = "24px Arial";
             ctx.fillStyle = "white";
